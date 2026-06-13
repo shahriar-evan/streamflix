@@ -11,17 +11,73 @@ const SPORT_ICONS = {
 }
 const si = (s) => SPORT_ICONS[(s || '').toLowerCase()] || '🏆'
 
+const FLAGS = {
+  'Mexico':'🇲🇽','South Africa':'🇿🇦','Brazil':'🇧🇷','Argentina':'🇦🇷',
+  'England':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','France':'🇫🇷','Germany':'🇩🇪','Spain':'🇪🇸',
+  'USA':'🇺🇸','United States':'🇺🇸','Portugal':'🇵🇹','Italy':'🇮🇹',
+  'Netherlands':'🇳🇱','Belgium':'🇧🇪','Croatia':'🇭🇷','Morocco':'🇲🇦',
+  'Japan':'🇯🇵','South Korea':'🇰🇷','Australia':'🇦🇺','Canada':'🇨🇦',
+  'Bangladesh':'🇧🇩','India':'🇮🇳','Pakistan':'🇵🇰','West Indies':'🏝️',
+  'Afghanistan':'🇦🇫','Sri Lanka':'🇱🇰','New Zealand':'🇳🇿',
+  'Saudi Arabia':'🇸🇦','Qatar':'🇶🇦','Ecuador':'🇪🇨','Switzerland':'🇨🇭',
+  'Uruguay':'🇺🇾','Colombia':'🇨🇴','Chile':'🇨🇱','Peru':'🇵🇪',
+  'Türkiye':'🇹🇷','Turkey':'🇹🇷','Haiti':'🇭🇹','Scotland':'🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+  'Curaçao':'🏝️','Australia-W':'🇦🇺','South Africa-W':'🇿🇦',
+  'West Indies-W':'🏝️','New Zealand-W':'🇳🇿','Bangladesh-W':'🇧🇩',
+  'Netherlands-W':'🇳🇱','India-W':'🇮🇳','Pakistan-W':'🇵🇰',
+}
+const getFlag = (name) => FLAGS[name] || '🏳️'
+
 export default function Home() {
   const [sport, setSport] = useState('all')
   const [activeMatch, setActiveMatch] = useState(null)
   const [activeChannel, setActiveChannel] = useState(null)
   const [activeServer, setActiveServer] = useState(null)
   const [streamUrl, setStreamUrl] = useState(null)
+  const [apiMatches, setApiMatches] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  // Load real matches from API
+  useEffect(() => {
+    const loadMatches = async () => {
+      try {
+        const res = await fetch('/api/matches')
+        const data = await res.json()
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped = data.map((e, i) => ({
+            id: e.id || `api-${i}`,
+            cat: (e.category || 'football').toLowerCase(),
+            tournament: e.league || e.category || 'Live Match',
+            team1: {
+              name: e.teams?.home?.name || e.title?.split(' vs ')[0] || 'Home',
+              flag: getFlag(e.teams?.home?.name || '')
+            },
+            team2: {
+              name: e.teams?.away?.name || e.title?.split(' vs ')[1] || 'Away',
+              flag: getFlag(e.teams?.away?.name || '')
+            },
+            scoreA: e.score?.home ?? '',
+            scoreB: e.score?.away ?? '',
+            status: e.status === 'live' || e.live ? 'live' : 'upcoming',
+            time: e.startTime || e.date || 'TBA',
+            channels: ['espn', 'fox', 'bein', 'tnt'],
+          }))
+          setApiMatches(mapped)
+        }
+      } catch (e) {}
+      setLoading(false)
+    }
+    loadMatches()
+    const interval = setInterval(loadMatches, 60000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const allMatches = apiMatches.length > 0 ? apiMatches : MATCHES
 
   const filtered = useCallback(() => {
-    if (sport === 'all') return MATCHES
-    return MATCHES.filter(m => m.cat === sport)
-  }, [sport])
+    if (sport === 'all') return allMatches
+    return allMatches.filter(m => m.cat === sport)
+  }, [sport, allMatches])
 
   const liveMatches = filtered().filter(m => m.status === 'live')
   const upcomingMatches = filtered().filter(m => m.status !== 'live')
