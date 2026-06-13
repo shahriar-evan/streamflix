@@ -96,6 +96,44 @@ export default function Home() {
 
   const [viewers, setViewers] = useState({})
   const [autoTrying, setAutoTrying] = useState(false)
+  const [favorites, setFavorites] = useState([])
+  const [scheduleTab, setScheduleTab] = useState('all')
+  const [stageTab, setStageTab] = useState('all')
+  const [voteChoice, setVoteChoice] = useState(null)
+  const [votes, setVotes] = useState({ team1: 37, draw: 7, team2: 56 })
+
+  const toggleFavorite = (chId) => {
+    setFavorites(prev => prev.includes(chId) ? prev.filter(x => x !== chId) : [...prev, chId])
+  }
+
+  const handleVote = (choice) => {
+    if (voteChoice) return
+    setVoteChoice(choice)
+    setVotes(prev => ({ ...prev, [choice]: prev[choice] + 1 }))
+  }
+
+  const SCHEDULE_MATCHES = [
+    { id: 's1', group: 'GROUP A', team1: 'Mexico', flag1: '🇲🇽', team2: 'South Africa', flag2: '🇿🇦', date: 'Fri, Jun 12', time: '1:00 AM', status: 'finished', stage: 'group' },
+    { id: 's2', group: 'GROUP A', team1: 'South Korea', flag1: '🇰🇷', team2: 'Czechia', flag2: '🇨🇿', date: 'Fri, Jun 12', time: '8:00 AM', status: 'finished', stage: 'group' },
+    { id: 's3', group: 'GROUP B', team1: 'Canada', flag1: '🇨🇦', team2: 'Bosnia and Herzegovina', flag2: '🇧🇦', date: 'Sat, Jun 13', time: '1:00 AM', status: 'finished', stage: 'group' },
+    { id: 's4', group: 'GROUP D', team1: 'USA', flag1: '🇺🇸', team2: 'Paraguay', flag2: '🇵🇾', date: 'Sat, Jun 13', time: '7:00 AM', status: 'finished', stage: 'group' },
+    { id: 's5', group: 'GROUP B', team1: 'Qatar', flag1: '🇶🇦', team2: 'Switzerland', flag2: '🇨🇭', date: 'Sun, Jun 14', time: '1:00 AM', status: 'live', stage: 'group', countdown: '58m 03s left' },
+    { id: 's6', group: 'GROUP C', team1: 'Brazil', flag1: '🇧🇷', team2: 'Morocco', flag2: '🇲🇦', date: 'Sun, Jun 14', time: '4:00 AM', status: 'upcoming', stage: 'group', countdown: '1h 58m 03s' },
+    { id: 's7', group: 'GROUP C', team1: 'Haiti', flag1: '🇭🇹', team2: 'Scotland', flag2: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', date: 'Sun, Jun 14', time: '7:00 AM', status: 'upcoming', stage: 'group', countdown: '4h 58m 03s' },
+    { id: 's8', group: 'GROUP D', team1: 'Australia', flag1: '🇦🇺', team2: 'Türkiye', flag2: '🇹🇷', date: 'Sun, Jun 14', time: '10:00 AM', status: 'upcoming', stage: 'group', countdown: '7h 58m 03s' },
+    { id: 's9', group: 'GROUP E', team1: 'Germany', flag1: '🇩🇪', team2: 'Curaçao', flag2: '🏝️', date: 'Sun, Jun 14', time: '11:00 PM', status: 'upcoming', stage: 'group', countdown: '20h 58m 03s' },
+    { id: 's10', group: 'GROUP F', team1: 'Netherlands', flag1: '🇳🇱', team2: 'Japan', flag2: '🇯🇵', date: 'Mon, Jun 15', time: '2:00 AM', status: 'upcoming', stage: 'group', countdown: '23h 58m 03s' },
+    { id: 's11', group: 'GROUP E', team1: 'Ivory Coast', flag1: '🇨🇮', team2: 'Ecuador', flag2: '🇪🇨', date: 'Mon, Jun 15', time: '5:00 AM', status: 'upcoming', stage: 'group', countdown: '1d 2h 58m' },
+    { id: 's12', group: 'GROUP F', team1: 'Sweden', flag1: '🇸🇪', team2: 'Tunisia', flag2: '🇹🇳', date: 'Mon, Jun 15', time: '8:00 AM', status: 'upcoming', stage: 'group', countdown: '1d 5h 58m' },
+  ]
+
+  const filteredSchedule = SCHEDULE_MATCHES.filter(m => {
+    if (scheduleTab === 'live') return m.status === 'live'
+    if (scheduleTab === 'today') return m.date === 'Sun, Jun 14'
+    if (scheduleTab === 'upcoming') return m.status === 'upcoming'
+    if (scheduleTab === 'finished') return m.status === 'finished'
+    return true
+  }).filter(m => stageTab === 'all' || m.stage === stageTab)
 
   // Generate fake viewer counts per channel
   useEffect(() => {
@@ -202,7 +240,14 @@ export default function Home() {
               boxShadow: activeChannel?.id === ch.id ? '0 2px 8px #2563eb44' : 'none'
             }}
           >
-            {ch.icon} {ch.name}
+            <span style={{display:'flex',alignItems:'center',gap:5}}>
+              {ch.icon} {ch.name}
+              <span
+                onClick={(e) => { e.stopPropagation(); toggleFavorite(ch.id) }}
+                style={{ fontSize: 13, opacity: favorites.includes(ch.id) ? 1 : 0.3, cursor: 'pointer', marginLeft: 2 }}
+                title={favorites.includes(ch.id) ? 'Remove from favorites' : 'Add to favorites'}
+              >⭐</span>
+            </span>
           </button>
         ))}
       </div>
@@ -362,73 +407,154 @@ export default function Home() {
             </div>
           )}
 
-          {/* UPCOMING */}
-          <div style={{ padding: '18px 20px' }}>
-            <div style={{
-              fontSize: 11, fontWeight: 700, color: 'var(--muted)',
-              textTransform: 'uppercase', letterSpacing: '1.5px',
-              marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8
-            }}>
-              Upcoming Matches
-              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 8 }}>
-              {upcomingMatches.slice(0, 8).map(m => (
-                <div
-                  key={m.id}
-                  onClick={() => selectMatch(m)}
-                  style={{
-                    background: 'var(--surface)', border: '1px solid var(--border)',
-                    borderRadius: 8, padding: 12, cursor: 'pointer', transition: 'all .2s'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
-                >
-                  <div style={{ fontSize: 9, color: 'var(--accent)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 7 }}>
-                    {si(m.cat)} {m.tournament}
-                  </div>
-                  <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 5 }}>
-                    {m.team1.flag} {m.team1.name} vs {m.team2.flag} {m.team2.name}
-                  </div>
-                  <div style={{ fontSize: 10, color: 'var(--muted)' }}>🕐 {m.time}</div>
+          {/* FAN PREDICTION */}
+          {activeMatch && (
+            <div style={{ margin: '16px 20px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 18 }}>📊</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>Fan Prediction</span>
                 </div>
-              ))}
+                <span style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>{(votes.team1 + votes.draw + votes.team2 + 8040).toLocaleString()} votes</span>
+              </div>
+              <div style={{ color: '#374151', fontSize: 12, marginBottom: 14 }}>আপনার মতে কে জিতবে?</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 18 }}>
+                {[
+                  { key: 'team1', label: activeMatch.team1.name, flag: activeMatch.team1.flag, color: '#3b82f6' },
+                  { key: 'draw', label: 'Draw', flag: '🤝', color: '#6b7280' },
+                  { key: 'team2', label: activeMatch.team2.name, flag: activeMatch.team2.flag, color: '#22c55e' },
+                ].map(opt => (
+                  <button key={opt.key} onClick={() => handleVote(opt.key)} style={{
+                    padding: '10px 8px', borderRadius: 8, border: '2px solid',
+                    borderColor: voteChoice === opt.key ? opt.color : '#e5e7eb',
+                    background: voteChoice === opt.key ? opt.color + '15' : '#fff',
+                    cursor: voteChoice ? 'default' : 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600,
+                    color: voteChoice === opt.key ? opt.color : '#374151', transition: 'all .2s'
+                  }}>
+                    <span style={{ fontSize: 16 }}>{opt.flag}</span> {opt.label}
+                  </button>
+                ))}
+              </div>
+              {[
+                { key: 'team1', label: activeMatch.team1.name, color: '#3b82f6' },
+                { key: 'draw', label: 'Draw', color: '#9ca3af' },
+                { key: 'team2', label: activeMatch.team2.name, color: '#22c55e' },
+              ].map(opt => {
+                const pct = Math.round(votes[opt.key] / (votes.team1 + votes.draw + votes.team2) * 100)
+                return (
+                  <div key={opt.key} style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 4 }}>
+                      <span>{opt.label}</span><span>{pct}%</span>
+                    </div>
+                    <div style={{ height: 8, background: '#f3f4f6', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: pct + '%', background: opt.color, borderRadius: 4, transition: 'width .5s' }} />
+                    </div>
+                  </div>
+                )
+              })}
+              {voteChoice && (
+                <div style={{ marginTop: 12, fontSize: 12, color: '#22c55e', fontWeight: 600, textAlign: 'center' }}>
+                  ✅ আপনার ভোট দেওয়া হয়েছে! ধন্যবাদ।
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
-          {/* LIVE TV CHANNELS */}
-          <div style={{ padding: '18px 20px', borderTop: '1px solid var(--border)' }}>
-            <div style={{
-              fontSize: 11, fontWeight: 700, color: 'var(--muted)',
-              textTransform: 'uppercase', letterSpacing: '1.5px',
-              marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8
-            }}>
-              Live TV Channels
-              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+          {/* FAVORITE CHANNELS */}
+          {favorites.length > 0 && (
+            <div style={{ margin: '0 20px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '12px 16px' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                ⭐ Favorite Channels
+              </div>
+              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none' }}>
+                {WC_CHANNELS.filter(ch => favorites.includes(ch.id)).map(ch => (
+                  <button key={ch.id} onClick={() => { setActiveMatch(null); selectChannel(ch) }} style={{
+                    padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600,
+                    background: activeChannel?.id === ch.id ? '#f59e0b' : '#fff',
+                    color: activeChannel?.id === ch.id ? '#fff' : '#374151',
+                    border: '1.5px solid #fcd34d', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0
+                  }}>
+                    {ch.icon} {ch.name}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6, scrollbarWidth: 'none' }}>
-              {WC_CHANNELS.map(ch => (
-                <div
-                  key={ch.id}
-                  onClick={() => {
-                    setActiveMatch(null)
-                    selectChannel(ch)
-                  }}
-                  style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                    padding: '10px 14px', background: 'var(--surface)',
-                    border: '1px solid var(--border)', borderRadius: 8,
-                    cursor: 'pointer', minWidth: 70, flexShrink: 0, transition: 'all .2s'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+          )}
+
+          {/* MATCH SCHEDULE */}
+          <div style={{ margin: '0 20px 20px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>📅 MATCH SCHEDULE</span>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {['all','live','today','upcoming','finished'].map(tab => (
+                  <button key={tab} onClick={() => setScheduleTab(tab)} style={{
+                    padding: '5px 11px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    background: scheduleTab === tab ? '#1d4ed8' : '#f3f4f6',
+                    color: scheduleTab === tab ? '#fff' : '#374151',
+                    border: 'none', textTransform: 'capitalize'
+                  }}>{tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
+                ))}
+              </div>
+            </div>
+            <div style={{ padding: '10px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none' }}>
+              {[
+                { id: 'all', label: 'All Stage' },
+                { id: 'group', label: 'Group Stage' },
+                { id: 'r32', label: 'Round 32' },
+                { id: 'r16', label: 'Round 16' },
+                { id: 'qf', label: 'Quarterfinals' },
+                { id: 'sf', label: 'Semi Finals' },
+                { id: 'final', label: 'Final' },
+              ].map(s => (
+                <button key={s.id} onClick={() => setStageTab(s.id)} style={{
+                  padding: '5px 13px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                  background: stageTab === s.id ? '#1d4ed8' : '#f3f4f6',
+                  color: stageTab === s.id ? '#fff' : '#374151',
+                  border: 'none', whiteSpace: 'nowrap', flexShrink: 0
+                }}>{s.label}</button>
+              ))}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
+              {filteredSchedule.map((m, i) => (
+                <div key={m.id} style={{
+                  padding: '14px 18px', borderBottom: '1px solid #f3f4f6',
+                  borderRight: i % 2 === 0 ? '1px solid #f3f4f6' : 'none',
+                  background: m.status === 'live' ? '#f0fdf4' : '#fff',
+                  cursor: 'pointer', transition: 'background .15s'
+                }}
+                  onMouseEnter={e => e.currentTarget.style.background = m.status === 'live' ? '#dcfce7' : '#f9fafb'}
+                  onMouseLeave={e => e.currentTarget.style.background = m.status === 'live' ? '#f0fdf4' : '#fff'}
                 >
-                  <div style={{ fontSize: 22 }}>{ch.icon}</div>
-                  <div style={{ fontSize: 9, fontWeight: 600, color: 'var(--muted)', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                    {ch.name}
+                  <div style={{ fontSize: 10, fontWeight: 700, color: '#3b82f6', marginBottom: 8, letterSpacing: '0.5px' }}>{m.group}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', marginBottom: 4 }}>
+                        {m.flag1} {m.team1}
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>
+                        {m.flag2} {m.team2}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', minWidth: 80 }}>
+                      <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>{m.date}</div>
+                      <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6 }}>{m.time}</div>
+                      {m.status === 'live' ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#fff', background: '#ef4444', padding: '2px 8px', borderRadius: 4 }}>
+                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#fff', display: 'inline-block', animation: 'pulse 1s infinite' }} /> LIVE
+                        </span>
+                      ) : m.status === 'finished' ? (
+                        <span style={{ fontSize: 10, fontWeight: 600, color: '#6b7280', background: '#f3f4f6', padding: '2px 8px', borderRadius: 4 }}>Finished</span>
+                      ) : (
+                        <span style={{ fontSize: 10, color: '#6b7280' }}>{m.countdown}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
+              {filteredSchedule.length === 0 && (
+                <div style={{ padding: 30, textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No matches found</div>
+              )}
             </div>
           </div>
 
