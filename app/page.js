@@ -160,21 +160,21 @@ export default function Home() {
       {/* NAV */}
       <nav style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 20px', height: 52,
-        background: 'rgba(10,10,15,0.95)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid var(--border)',
+        padding: '0 20px', height: 54,
+        background: '#1a1a2e',
+        borderBottom: '3px solid #e50914',
         position: 'sticky', top: 0, zIndex: 100
       }}>
-        <div style={{ fontSize: 20, fontWeight: 800 }}>
-          Stream<span style={{ color: 'var(--accent)' }}>Flix</span>
+        <div style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>
+          Stream<span style={{ color: '#e50914' }}>Flix</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8' }}>
             👁 {Object.values(viewers).reduce((a, b) => a + b, 0).toLocaleString()} watching
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--live)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: '#ef4444' }}>
             <div style={{
-              width: 6, height: 6, borderRadius: '50%', background: 'var(--live)',
+              width: 7, height: 7, borderRadius: '50%', background: '#ef4444',
               animation: 'pulse 1.2s infinite'
             }} />
             LIVE
@@ -304,29 +304,30 @@ export default function Home() {
           {/* CHANNEL BAR */}
           {activeMatch && getMatchChannels(activeMatch).length > 0 && (
             <div style={{
-              background: 'var(--surface2)', borderBottom: '1px solid var(--border)',
-              padding: '10px 20px', display: 'flex', gap: 8,
+              background: '#fff', borderBottom: '1px solid #e5e7eb',
+              padding: '8px 16px', display: 'flex', gap: 6,
               overflowX: 'auto', scrollbarWidth: 'none', alignItems: 'center'
             }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '1px', whiteSpace: 'nowrap', marginRight: 4 }}>
-                📺 Channels
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '1px', whiteSpace: 'nowrap', marginRight: 4 }}>
+                📺 CHANNELS
               </span>
               {getMatchChannels(activeMatch).map(ch => (
                 <button
                   key={ch.id}
                   onClick={() => selectChannel(ch)}
                   style={{
-                    padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                    padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600,
                     cursor: 'pointer', border: '1.5px solid',
-                    borderColor: activeChannel?.id === ch.id ? 'var(--accent)' : 'var(--border)',
-                    background: activeChannel?.id === ch.id ? 'var(--accent)' : 'transparent',
-                    color: activeChannel?.id === ch.id ? '#fff' : 'var(--muted)',
+                    borderColor: activeChannel?.id === ch.id ? '#e50914' : '#d1d5db',
+                    background: activeChannel?.id === ch.id ? '#e50914' : '#fff',
+                    color: activeChannel?.id === ch.id ? '#fff' : '#374151',
                     whiteSpace: 'nowrap', flexShrink: 0, transition: 'all .15s',
-                    display: 'flex', alignItems: 'center', gap: 5
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    boxShadow: activeChannel?.id === ch.id ? '0 2px 8px #e5091430' : 'none'
                   }}
                 >
                   {ch.icon} {ch.name}
-                  <span style={{ fontSize: 9, opacity: 0.8 }}>👁 {viewers[ch.id] || 0}</span>
+                  <span style={{ fontSize: 9, opacity: 0.75 }}>👁 {viewers[ch.id] || 0}</span>
                 </button>
               ))}
             </div>
@@ -335,23 +336,23 @@ export default function Home() {
           {/* SERVER BAR */}
           {activeChannel && (
             <div style={{
-              background: '#0f0f18', borderBottom: '1px solid var(--border)',
-              padding: '8px 20px', display: 'flex', gap: 6,
+              background: '#f9fafb', borderBottom: '1px solid #e5e7eb',
+              padding: '7px 16px', display: 'flex', gap: 6,
               overflowX: 'auto', scrollbarWidth: 'none', alignItems: 'center'
             }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '1px', whiteSpace: 'nowrap', marginRight: 4 }}>
-                🔗 Servers {autoTrying && <span style={{color:'var(--accent)'}}>⟳ Auto...</span>}
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '1px', whiteSpace: 'nowrap', marginRight: 4 }}>
+                🔗 SERVERS {autoTrying && <span style={{color:'#e50914'}}>⟳ Auto...</span>}
               </span>
               {activeChannel.servers.map((srv, i) => (
                 <button
                   key={i}
                   onClick={() => selectServer(srv)}
                   style={{
-                    padding: '4px 10px', borderRadius: 5, fontSize: 11, fontWeight: 600,
+                    padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600,
                     cursor: 'pointer', border: '1.5px solid',
-                    borderColor: activeServer?.label === srv.label ? '#ff6b35' : 'var(--border)',
-                    background: activeServer?.label === srv.label ? 'rgba(255,107,53,0.3)' : 'transparent',
-                    color: activeServer?.label === srv.label ? '#ff6b35' : 'var(--muted)',
+                    borderColor: activeServer?.label === srv.label ? '#2563eb' : '#d1d5db',
+                    background: activeServer?.label === srv.label ? '#2563eb' : '#fff',
+                    color: activeServer?.label === srv.label ? '#fff' : '#6b7280',
                     whiteSpace: 'nowrap', flexShrink: 0, transition: 'all .15s'
                   }}
                 >
@@ -446,36 +447,37 @@ function MatchCard({ match, active, onClick }) {
       onClick={onClick}
       style={{
         padding: '12px 14px',
-        borderBottom: '1px solid var(--border)',
-        borderLeft: active ? '3px solid var(--accent)' : '3px solid transparent',
-        background: active ? 'var(--surface2)' : 'transparent',
+        borderBottom: '1px solid #e5e7eb',
+        borderLeft: active ? '3px solid #e50914' : '3px solid transparent',
+        background: active ? '#fef2f2' : '#fff',
         cursor: 'pointer', position: 'relative', transition: 'background .15s'
       }}
-      onMouseEnter={e => !active && (e.currentTarget.style.background = 'var(--surface2)')}
-      onMouseLeave={e => !active && (e.currentTarget.style.background = 'transparent')}
+      onMouseEnter={e => !active && (e.currentTarget.style.background = '#f9fafb')}
+      onMouseLeave={e => !active && (e.currentTarget.style.background = '#fff')}
     >
-      <div style={{ fontSize: 9, color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 7 }}>
+      <div style={{ fontSize: 9, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 7 }}>
         {si(match.cat)} {match.tournament}
       </div>
       {chCount > 0 && (
         <div style={{
           position: 'absolute', right: 12, top: 12,
-          fontSize: 9, fontWeight: 700, color: 'var(--accent)',
-          background: '#e5091422', padding: '2px 6px', borderRadius: 4
+          fontSize: 9, fontWeight: 700, color: '#e50914',
+          background: '#fef2f2', padding: '2px 6px', borderRadius: 4,
+          border: '1px solid #fecaca'
         }}>
           {chCount} ch
         </div>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
         {[match.team1, match.team2].map((team, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 500 }}>
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 500, color: '#111827' }}>
             <span style={{ fontSize: 17, width: 22, textAlign: 'center' }}>{team.flag}</span>
             <span style={{ flex: 1 }}>{team.name}</span>
             {i === 0 && match.scoreA !== '' && (
-              <span style={{ fontSize: 15, fontWeight: 700 }}>{match.scoreA}</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{match.scoreA}</span>
             )}
             {i === 1 && match.scoreB !== '' && (
-              <span style={{ fontSize: 15, fontWeight: 700 }}>{match.scoreB}</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{match.scoreB}</span>
             )}
           </div>
         ))}
@@ -484,11 +486,12 @@ function MatchCard({ match, active, onClick }) {
         display: 'inline-flex', alignItems: 'center', gap: 4,
         marginTop: 7, fontSize: 10, fontWeight: 700,
         padding: '2px 7px', borderRadius: 4,
-        background: isLive ? '#ff2d2d22' : '#ffffff0a',
-        color: isLive ? 'var(--live)' : 'var(--muted)'
+        background: isLive ? '#fef2f2' : '#f3f4f6',
+        color: isLive ? '#ef4444' : '#6b7280',
+        border: isLive ? '1px solid #fecaca' : '1px solid #e5e7eb'
       }}>
         {isLive ? (
-          <><span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--live)', display: 'inline-block', animation: 'pulse 1s infinite' }} /> LIVE</>
+          <><span style={{ width: 5, height: 5, borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'pulse 1s infinite' }} /> LIVE</>
         ) : `🕐 ${match.time}`}
       </span>
     </div>

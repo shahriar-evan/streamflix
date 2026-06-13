@@ -27,7 +27,11 @@ export default function VideoPlayer({ url }) {
           index: i,
           label: l.height ? `${l.height}p` : `Level ${i}`,
           bitrate: l.bitrate
-        })).reverse()
+        })).sort((a, b) => {
+          const ha = parseInt(a.label) || 0
+          const hb = parseInt(b.label) || 0
+          return hb - ha
+        })
         setQualityLevels(levels)
       })
       hls.on(Hls.Events.ERROR, (e, d) => {
@@ -42,24 +46,18 @@ export default function VideoPlayer({ url }) {
   }
 
   useEffect(() => {
-    // Clear old countdown
     if (countdownRef.current) clearInterval(countdownRef.current)
     if (!url) { setCountdown(null); return }
-
-    // Start 5s countdown
     setCountdown(5)
     setBuffering(false)
+    setQualityLevels([])
+    setQuality('auto')
     countdownRef.current = setInterval(() => {
       setCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(countdownRef.current)
-          loadHLS(url)
-          return null
-        }
+        if (prev <= 1) { clearInterval(countdownRef.current); loadHLS(url); return null }
         return prev - 1
       })
     }, 1000)
-
     return () => {
       clearInterval(countdownRef.current)
       if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null }
@@ -80,6 +78,8 @@ export default function VideoPlayer({ url }) {
   const refresh = () => {
     if (countdownRef.current) clearInterval(countdownRef.current)
     setCountdown(5)
+    setQualityLevels([])
+    setQuality('auto')
     countdownRef.current = setInterval(() => {
       setCountdown(prev => {
         if (prev <= 1) { clearInterval(countdownRef.current); loadHLS(url); return null }
@@ -95,115 +95,145 @@ export default function VideoPlayer({ url }) {
   }
 
   return (
-    <div style={{ position: 'relative', background: '#000', aspectRatio: '16/9', maxHeight: '58vh' }}>
-      {/* No stream selected */}
+    <div style={{ position: 'relative', background: '#000', aspectRatio: '16/9', maxHeight: '62vh' }}>
+      {/* No stream */}
       {!url && (
         <div style={{
           position: 'absolute', inset: 0, display: 'flex',
           flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           gap: 12, background: 'linear-gradient(135deg,#0a0a0f,#1a1a28)'
         }}>
-          <div style={{ fontSize: 52, opacity: 0.2 }}>▶</div>
-          <p style={{ color: '#777', fontSize: 13 }}>Select a match or channel to watch live</p>
+          <div style={{ fontSize: 52, opacity: 0.15 }}>▶</div>
+          <p style={{ color: '#666', fontSize: 13 }}>Select a match or channel to watch live</p>
         </div>
       )}
 
-      {/* Countdown Overlay */}
+      {/* Countdown */}
       {countdown !== null && (
         <div style={{
           position: 'absolute', inset: 0, display: 'flex',
           flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.92)', zIndex: 10
+          background: 'rgba(0,0,0,0.93)', zIndex: 10
         }}>
-          {/* Spinner ring */}
-          <div style={{ position: 'relative', width: 100, height: 100, marginBottom: 20 }}>
+          <div style={{ position: 'relative', width: 110, height: 110, marginBottom: 22 }}>
             <div style={{
               position: 'absolute', inset: 0,
-              border: '4px solid rgba(255,255,255,0.1)',
-              borderTop: '4px solid #e50914',
+              border: '5px solid rgba(255,255,255,0.08)',
+              borderTop: '5px solid #e50914',
               borderRadius: '50%',
               animation: 'spin 1s linear infinite'
             }} />
             <div style={{
               position: 'absolute', inset: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 32, fontWeight: 800, color: '#fff'
-            }}>
-              {countdown}
-            </div>
+              fontSize: 38, fontWeight: 800, color: '#fff'
+            }}>{countdown}</div>
           </div>
-          <p style={{ color: '#aaa', fontSize: 14, fontWeight: 600, marginBottom: 4 }}>
+          <p style={{ color: '#ccc', fontSize: 14, fontWeight: 600, marginBottom: 6 }}>
             Connecting securely to the server...
           </p>
-          <p style={{ color: '#666', fontSize: 12 }}>
-            Optimizing stream for your device.
-          </p>
+          <p style={{ color: '#666', fontSize: 12 }}>Optimizing stream for your device.</p>
         </div>
       )}
 
-      {/* Buffering Spinner (after countdown) */}
+      {/* Buffering */}
       {buffering && !countdown && (
         <div style={{
           position: 'absolute', inset: 0, display: 'flex',
           alignItems: 'center', justifyContent: 'center',
-          background: 'rgba(0,0,0,0.3)', zIndex: 5, pointerEvents: 'none'
+          background: 'rgba(0,0,0,0.35)', zIndex: 5, pointerEvents: 'none'
         }}>
           <div style={{
-            width: 48, height: 48, border: '4px solid rgba(255,255,255,0.2)',
+            width: 52, height: 52, border: '4px solid rgba(255,255,255,0.15)',
             borderTop: '4px solid #e50914', borderRadius: '50%',
             animation: 'spin 0.8s linear infinite'
           }} />
         </div>
       )}
 
-      <video ref={videoRef} controls playsInline style={{ width: '100%', height: '100%', display: 'block' }} />
+      <video
+        ref={videoRef}
+        playsInline
+        style={{ width: '100%', height: '100%', display: 'block', objectFit: 'contain', background: '#000' }}
+      />
 
+      {/* Controls */}
       {url && !countdown && (
-        <div style={{ position: 'absolute', bottom: 8, right: 8, display: 'flex', gap: 6, zIndex: 10 }}>
+        <div style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+          gap: 6, padding: '10px 12px',
+          background: 'linear-gradient(transparent, rgba(0,0,0,0.75))',
+          zIndex: 10
+        }}>
+          {/* Quality Selector */}
           <div style={{ position: 'relative' }}>
             <button onClick={() => setShowQuality(!showQuality)} style={btnStyle}>
-              ⚙ {quality.toUpperCase()}
+              ⚙ {quality === 'auto' ? 'AUTO' : quality.toUpperCase()}
             </button>
             {showQuality && (
               <div style={{
                 position: 'absolute', bottom: '110%', right: 0,
-                background: '#1a1a28', border: '1px solid #ffffff20',
-                borderRadius: 8, overflow: 'hidden', minWidth: 140, zIndex: 20
+                background: '#1c1c2e', border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 10, overflow: 'hidden', minWidth: 160, zIndex: 30,
+                boxShadow: '0 4px 24px rgba(0,0,0,0.5)'
               }}>
-                <div onClick={() => setQualityLevel(-1)} style={qualityItemStyle(quality === 'auto')}>✓ Auto</div>
+                <div style={menuHeaderStyle}>Resolution</div>
+                {/* Auto first */}
+                <div onClick={() => setQualityLevel(-1)} style={qualityItemStyle(quality === 'auto')}>
+                  <span>Auto</span>
+                  {quality === 'auto' && <span style={{ color: '#e50914' }}>✓</span>}
+                </div>
+                {/* Sorted quality levels */}
                 {qualityLevels.map(l => (
                   <div key={l.index} onClick={() => setQualityLevel(l.index)} style={qualityItemStyle(quality === l.label)}>
-                    {quality === l.label ? '✓ ' : ''}{l.label}
-                    {l.bitrate ? ` • ${(l.bitrate/1000000).toFixed(1)} Mbps` : ''}
+                    <span>
+                      {l.label}
+                      {l.label === '1080p' && <span style={{ fontSize: 9, color: '#e50914', fontWeight: 700, marginLeft: 4 }}>HD</span>}
+                      {l.bitrate && l.bitrate > 0 && (
+                        <span style={{ fontSize: 10, color: '#666', marginLeft: 6 }}>
+                          {(l.bitrate / 1000000).toFixed(1)} Mbps
+                        </span>
+                      )}
+                    </span>
+                    {quality === l.label && <span style={{ color: '#e50914' }}>✓</span>}
                   </div>
                 ))}
               </div>
             )}
           </div>
+
           <button onClick={refresh} style={btnStyle}>↺ Refresh</button>
           <button onClick={toggleFullscreen} style={btnStyle}>⛶ Fullscreen</button>
         </div>
       )}
 
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }
 
 const btnStyle = {
-  padding: '5px 10px', borderRadius: 6, fontSize: 11,
+  padding: '6px 12px', borderRadius: 7, fontSize: 11,
   fontWeight: 600, cursor: 'pointer',
-  border: '1.5px solid rgba(255,255,255,0.2)',
-  background: 'rgba(0,0,0,0.7)', color: '#fff',
-  backdropFilter: 'blur(4px)', whiteSpace: 'nowrap'
+  border: '1px solid rgba(255,255,255,0.18)',
+  background: 'rgba(0,0,0,0.65)', color: '#fff',
+  backdropFilter: 'blur(6px)', whiteSpace: 'nowrap',
+  transition: 'all .15s'
+}
+
+const menuHeaderStyle = {
+  padding: '10px 14px 6px',
+  fontSize: 10, fontWeight: 700, color: '#888',
+  textTransform: 'uppercase', letterSpacing: '1.5px',
+  borderBottom: '1px solid rgba(255,255,255,0.06)'
 }
 
 const qualityItemStyle = (active) => ({
-  padding: '8px 14px', fontSize: 12, cursor: 'pointer',
-  color: active ? '#e50914' : '#f0f0f0',
-  fontWeight: active ? 700 : 400,
-  background: active ? '#ffffff08' : 'transparent',
-  transition: 'background .15s',
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  padding: '10px 14px', fontSize: 13, cursor: 'pointer',
+  color: active ? '#fff' : '#ccc',
+  fontWeight: active ? 600 : 400,
+  background: active ? 'rgba(229,9,20,0.15)' : 'transparent',
+  transition: 'background .12s',
 })
