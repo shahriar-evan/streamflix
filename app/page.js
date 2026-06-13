@@ -182,6 +182,31 @@ export default function Home() {
         </div>
       </nav>
 
+      {/* CHANNEL TABS — KickBD style, always visible at top */}
+      <div style={{
+        display: 'flex', gap: 6, padding: '8px 16px',
+        background: '#fff', borderBottom: '2px solid #e5e7eb',
+        overflowX: 'auto', scrollbarWidth: 'none', alignItems: 'center'
+      }}>
+        {WC_CHANNELS.map(ch => (
+          <button
+            key={ch.id}
+            onClick={() => { setActiveMatch(null); selectChannel(ch) }}
+            style={{
+              padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+              cursor: 'pointer', border: '1.5px solid',
+              borderColor: activeChannel?.id === ch.id ? '#2563eb' : '#d1d5db',
+              background: activeChannel?.id === ch.id ? '#2563eb' : '#fff',
+              color: activeChannel?.id === ch.id ? '#fff' : '#374151',
+              whiteSpace: 'nowrap', flexShrink: 0, transition: 'all .15s',
+              boxShadow: activeChannel?.id === ch.id ? '0 2px 8px #2563eb44' : 'none'
+            }}
+          >
+            {ch.icon} {ch.name}
+          </button>
+        ))}
+      </div>
+
       {/* SPORT TABS */}
       <div style={{
         display: 'flex', gap: 6, padding: '10px 20px',
