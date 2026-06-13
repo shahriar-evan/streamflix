@@ -72,12 +72,8 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [])
 
-  // Merge API matches with static MATCHES (static always shown, API adds more)
-  const allMatches = (() => {
-    const staticIds = new Set(MATCHES.map(m => m.id))
-    const apiExtra = apiMatches.filter(m => !staticIds.has(m.id))
-    return [...MATCHES, ...apiExtra]
-  })()
+  // API data আসলে সেটা show করো, না আসলে static fallback
+  const allMatches = apiMatches.length > 0 ? apiMatches : MATCHES
 
   const filtered = useCallback(() => {
     if (sport === 'all') return allMatches
