@@ -76,6 +76,8 @@ export default function Home() {
 
   const filtered = useCallback(() => {
     if (sport === 'all') return allMatches
+    if (sport === '__live__') return allMatches.filter(m => m.status === 'live')
+    if (sport === '__upcoming__') return allMatches.filter(m => m.status === 'upcoming')
     return allMatches.filter(m => m.cat === sport)
   }, [sport, allMatches])
 
@@ -254,26 +256,38 @@ export default function Home() {
 
       {/* SPORT TABS */}
       <div style={{
-        display: 'flex', gap: 6, padding: '10px 20px',
-        background: 'var(--surface)', borderBottom: '1px solid var(--border)',
+        display: 'flex', gap: 6, padding: '8px 16px',
+        background: '#fff', borderBottom: '1px solid #e5e7eb',
         overflowX: 'auto', scrollbarWidth: 'none'
       }}>
-        {SPORT_TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setSport(tab.id)}
-            style={{
-              padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-              cursor: 'pointer', border: '1.5px solid',
-              borderColor: sport === tab.id ? 'var(--accent)' : 'var(--border)',
-              background: sport === tab.id ? 'var(--accent)' : 'transparent',
-              color: sport === tab.id ? '#fff' : 'var(--muted)',
-              whiteSpace: 'nowrap', flexShrink: 0, transition: 'all .2s'
-            }}
-          >
-            {tab.icon} {tab.label}
-          </button>
-        ))}
+        {SPORT_TABS.map(tab => {
+          const liveCount = tab.id === 'all' ? allMatches.filter(m=>m.status==='live').length : allMatches.filter(m=>m.cat===tab.id && m.status==='live').length
+          const isActive = sport === tab.id
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setSport(tab.id)}
+              style={{
+                padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                cursor: 'pointer', border: '1.5px solid',
+                borderColor: isActive ? '#e50914' : '#d1d5db',
+                background: isActive ? '#e50914' : '#fff',
+                color: isActive ? '#fff' : '#374151',
+                whiteSpace: 'nowrap', flexShrink: 0, transition: 'all .2s',
+                display: 'flex', alignItems: 'center', gap: 5
+              }}
+            >
+              {tab.icon} {tab.label}
+              {liveCount > 0 && (
+                <span style={{
+                  fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 10,
+                  background: isActive ? 'rgba(255,255,255,0.3)' : '#ef4444',
+                  color: '#fff', minWidth: 16, textAlign: 'center'
+                }}>{liveCount}</span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       {/* MAIN */}
@@ -282,27 +296,53 @@ export default function Home() {
         {/* SIDEBAR */}
         <div style={{
           width: 300, flexShrink: 0,
-          borderRight: '1px solid var(--border)',
-          background: 'var(--surface)', overflowY: 'auto'
+          borderRight: '1px solid #e5e7eb',
+          background: '#fff', overflowY: 'auto'
         }}>
-          {liveMatches.length > 0 && (
+          {/* All/Live/Upcoming tabs */}
+          <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', background: '#f9fafb' }}>
+            {[
+              { id: 'all', label: 'All', count: allMatches.length },
+              { id: 'live', label: 'Live', count: allMatches.filter(m=>m.status==='live').length },
+              { id: 'upcoming', label: 'Upcoming', count: allMatches.filter(m=>m.status==='upcoming').length },
+            ].map(tab => (
+              <button key={tab.id} onClick={() => setSport(tab.id === 'live' ? '__live__' : tab.id === 'upcoming' ? '__upcoming__' : 'all')}
+                style={{
+                  flex: 1, padding: '9px 4px', fontSize: 11, fontWeight: 700,
+                  background: 'transparent', border: 'none', cursor: 'pointer',
+                  borderBottom: (['all','__live__','__upcoming__'].includes(sport) ? (sport === '__live__' && tab.id === 'live') || (sport === '__upcoming__' && tab.id === 'upcoming') || (sport === 'all' && tab.id === 'all') : false) ? '3px solid #22c55e' : '3px solid transparent',
+                  color: (sport === '__live__' && tab.id === 'live') || (sport === '__upcoming__' && tab.id === 'upcoming') || (sport === 'all' && tab.id === 'all') ? '#22c55e' : '#6b7280',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5
+                }}>
+                {tab.label}
+                <span style={{
+                  fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10,
+                  background: tab.id === 'live' && tab.count > 0 ? '#ef4444' : '#e5e7eb',
+                  color: tab.id === 'live' && tab.count > 0 ? '#fff' : '#6b7280'
+                }}>{tab.count}</span>
+              </button>
+            ))}
+          </div>
+
+          {liveMatches.length > 0 && sport !== '__upcoming__' && (
             <>
-              <div style={{ padding: '10px 14px 4px', fontSize: 10, fontWeight: 700, color: 'var(--muted)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                🔴 Live Now
+              <div style={{ padding: '8px 14px 4px', fontSize: 10, fontWeight: 700, color: '#6b7280', letterSpacing: '1px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'pulse 1s infinite' }} />
+                Live Now · {liveMatches.length}
               </div>
               {liveMatches.map(m => <MatchCard key={m.id} match={m} active={activeMatch?.id === m.id} onClick={() => selectMatch(m)} />)}
             </>
           )}
-          {upcomingMatches.length > 0 && (
+          {upcomingMatches.length > 0 && sport !== '__live__' && (
             <>
-              <div style={{ padding: '10px 14px 4px', fontSize: 10, fontWeight: 700, color: 'var(--muted)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                🕐 Next Matches
+              <div style={{ padding: '8px 14px 4px', fontSize: 10, fontWeight: 700, color: '#6b7280', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                🕐 Upcoming · {upcomingMatches.length}
               </div>
-              {upcomingMatches.slice(0, 8).map(m => <MatchCard key={m.id} match={m} active={activeMatch?.id === m.id} onClick={() => selectMatch(m)} />)}
+              {upcomingMatches.slice(0, 15).map(m => <MatchCard key={m.id} match={m} active={activeMatch?.id === m.id} onClick={() => selectMatch(m)} />)}
             </>
           )}
           {!liveMatches.length && !upcomingMatches.length && (
-            <div style={{ padding: 30, color: 'var(--muted)', fontSize: 12, textAlign: 'center' }}>No matches</div>
+            <div style={{ padding: 30, color: '#9ca3af', fontSize: 12, textAlign: 'center' }}>No matches found</div>
           )}
         </div>
 
@@ -569,57 +609,66 @@ function MatchCard({ match, active, onClick }) {
   const chCount = (match.channels || []).length
 
   return (
-    <div
-      onClick={onClick}
-      style={{
-        padding: '12px 14px',
-        borderBottom: '1px solid #e5e7eb',
-        borderLeft: active ? '3px solid #e50914' : '3px solid transparent',
-        background: active ? '#fef2f2' : '#fff',
-        cursor: 'pointer', position: 'relative', transition: 'background .15s'
-      }}
+    <div onClick={onClick} style={{
+      padding: '13px 14px',
+      borderBottom: '1px solid #e5e7eb',
+      borderLeft: active ? '3px solid #22c55e' : '3px solid transparent',
+      background: active ? '#f0fdf4' : '#fff',
+      cursor: 'pointer', position: 'relative', transition: 'background .15s'
+    }}
       onMouseEnter={e => !active && (e.currentTarget.style.background = '#f9fafb')}
       onMouseLeave={e => !active && (e.currentTarget.style.background = '#fff')}
     >
-      <div style={{ fontSize: 9, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 7 }}>
-        {si(match.cat)} {match.tournament}
-      </div>
-      {chCount > 0 && (
-        <div style={{
-          position: 'absolute', right: 12, top: 12,
-          fontSize: 9, fontWeight: 700, color: '#e50914',
-          background: '#fef2f2', padding: '2px 6px', borderRadius: 4,
-          border: '1px solid #fecaca'
-        }}>
-          {chCount} ch
+      {/* Tournament header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
+        <div style={{ fontSize: 10, color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          {si(match.cat)} {match.tournament}
         </div>
-      )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        {[match.team1, match.team2].map((team, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 500, color: '#111827' }}>
-            <span style={{ fontSize: 17, width: 22, textAlign: 'center' }}>{team.flag}</span>
-            <span style={{ flex: 1 }}>{team.name}</span>
-            {i === 0 && match.scoreA !== '' && (
-              <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{match.scoreA}</span>
-            )}
-            {i === 1 && match.scoreB !== '' && (
-              <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{match.scoreB}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          {match.hot && (
+            <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg,#f59e0b,#ef4444)', padding: '2px 6px', borderRadius: 4 }}>HOT</span>
+          )}
+          {chCount > 0 && (
+            <span style={{ fontSize: 9, fontWeight: 700, color: '#3b82f6', background: '#eff6ff', padding: '2px 6px', borderRadius: 4, border: '1px solid #bfdbfe' }}>{chCount} ch</span>
+          )}
+        </div>
+      </div>
+
+      {/* Teams */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Team badges / flags */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 600, color: '#111827' }}>
+            <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{match.team1.flag}</span>
+            <span style={{ flex: 1 }}>{match.team1.name}</span>
+            {match.scoreA !== '' && match.scoreA !== undefined && (
+              <span style={{ fontSize: 16, fontWeight: 800, color: '#111827', minWidth: 20, textAlign: 'right' }}>{match.scoreA}</span>
             )}
           </div>
-        ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 600, color: '#111827' }}>
+            <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{match.team2.flag}</span>
+            <span style={{ flex: 1 }}>{match.team2.name}</span>
+            {match.scoreB !== '' && match.scoreB !== undefined && (
+              <span style={{ fontSize: 16, fontWeight: 800, color: '#111827', minWidth: 20, textAlign: 'right' }}>{match.scoreB}</span>
+            )}
+          </div>
+        </div>
       </div>
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', gap: 4,
-        marginTop: 7, fontSize: 10, fontWeight: 700,
-        padding: '2px 7px', borderRadius: 4,
-        background: isLive ? '#fef2f2' : '#f3f4f6',
-        color: isLive ? '#ef4444' : '#6b7280',
-        border: isLive ? '1px solid #fecaca' : '1px solid #e5e7eb'
-      }}>
+
+      {/* Status */}
+      <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
         {isLive ? (
-          <><span style={{ width: 5, height: 5, borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'pulse 1s infinite' }} /> LIVE</>
-        ) : `🕐 ${match.time}`}
-      </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#ef4444' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'pulse 1s infinite' }} />
+            Live
+          </span>
+        ) : (
+          <span style={{ fontSize: 10, color: '#6b7280' }}>🕐 {match.time}</span>
+        )}
+        {match.elapsed && isLive && (
+          <span style={{ fontSize: 10, color: '#6b7280' }}>· {match.elapsed}</span>
+        )}
+      </div>
     </div>
   )
 }
