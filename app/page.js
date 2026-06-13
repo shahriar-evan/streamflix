@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 import { WC_CHANNELS, MATCHES, SPORT_TABS } from '../lib/data'
 
@@ -38,11 +38,53 @@ export default function Home() {
     }
   }
 
+  const [viewers, setViewers] = useState({})
+  const [autoTrying, setAutoTrying] = useState(false)
+
+  // Generate fake viewer counts per channel
+  useEffect(() => {
+    const counts = {}
+    WC_CHANNELS.forEach(ch => {
+      counts[ch.id] = Math.floor(Math.random() * 450) + 50
+    })
+    setViewers(counts)
+    const interval = setInterval(() => {
+      setViewers(prev => {
+        const next = { ...prev }
+        Object.keys(next).forEach(id => {
+          const change = Math.floor(Math.random() * 21) - 10
+          next[id] = Math.max(10, Math.min(999, next[id] + change))
+        })
+        return next
+      })
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const tryServersAuto = async (ch) => {
+    setAutoTrying(true)
+    for (let i = 0; i < ch.servers.length; i++) {
+      const srv = ch.servers[i]
+      try {
+        const res = await fetch(srv.url, { method: 'HEAD', signal: AbortSignal.timeout(3000) })
+        if (res.ok) {
+          setActiveServer(srv)
+          setStreamUrl(srv.url)
+          setAutoTrying(false)
+          return
+        }
+      } catch (e) {}
+    }
+    // fallback to first
+    setActiveServer(ch.servers[0])
+    setStreamUrl(ch.servers[0].url)
+    setAutoTrying(false)
+  }
+
   const selectChannel = (ch, match = activeMatch) => {
     setActiveChannel(ch)
     if (ch.servers.length > 0) {
-      setActiveServer(ch.servers[0])
-      setStreamUrl(ch.servers[0].url)
+      tryServersAuto(ch)
     }
   }
 
@@ -70,12 +112,17 @@ export default function Home() {
         <div style={{ fontSize: 20, fontWeight: 800 }}>
           Stream<span style={{ color: 'var(--accent)' }}>Flix</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--live)' }}>
-          <div style={{
-            width: 6, height: 6, borderRadius: '50%', background: 'var(--live)',
-            animation: 'pulse 1.2s infinite'
-          }} />
-          LIVE
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
+            👁 {Object.values(viewers).reduce((a, b) => a + b, 0).toLocaleString()} watching
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: 'var(--live)' }}>
+            <div style={{
+              width: 6, height: 6, borderRadius: '50%', background: 'var(--live)',
+              animation: 'pulse 1.2s infinite'
+            }} />
+            LIVE
+          </div>
         </div>
       </nav>
 
@@ -193,10 +240,12 @@ export default function Home() {
                     borderColor: activeChannel?.id === ch.id ? 'var(--accent)' : 'var(--border)',
                     background: activeChannel?.id === ch.id ? 'var(--accent)' : 'transparent',
                     color: activeChannel?.id === ch.id ? '#fff' : 'var(--muted)',
-                    whiteSpace: 'nowrap', flexShrink: 0, transition: 'all .15s'
+                    whiteSpace: 'nowrap', flexShrink: 0, transition: 'all .15s',
+                    display: 'flex', alignItems: 'center', gap: 5
                   }}
                 >
                   {ch.icon} {ch.name}
+                  <span style={{ fontSize: 9, opacity: 0.8 }}>👁 {viewers[ch.id] || 0}</span>
                 </button>
               ))}
             </div>
@@ -210,7 +259,7 @@ export default function Home() {
               overflowX: 'auto', scrollbarWidth: 'none', alignItems: 'center'
             }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '1px', whiteSpace: 'nowrap', marginRight: 4 }}>
-                🔗 Servers
+                🔗 Servers {autoTrying && <span style={{color:'var(--accent)'}}>⟳ Auto...</span>}
               </span>
               {activeChannel.servers.map((srv, i) => (
                 <button
