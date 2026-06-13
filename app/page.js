@@ -72,13 +72,22 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [])
 
-  // API data আসলে সেটা show করো, না আসলে static fallback
-  const allMatches = apiMatches.length > 0 ? apiMatches : MATCHES
+  // Static MATCHES সবসময় দেখাবে, API থেকে valid matches extra add হবে
+  const allMatches = (() => {
+    const staticIds = new Set(MATCHES.map(m => m.id))
+    // Only add API matches that have real team names (not "Home"/"Away")
+    const validApi = apiMatches.filter(m =>
+      m.team1?.name && m.team2?.name &&
+      m.team1.name !== 'Home' && m.team2.name !== 'Away' &&
+      m.team1.name !== 'TBA' && m.team2.name !== 'TBA' &&
+      !staticIds.has(m.id)
+    )
+    return [...MATCHES, ...validApi]
+  })()
 
   const filtered = useCallback(() => {
-    if (sport === 'all') return allMatches
-    if (sport === '__live__') return allMatches.filter(m => m.status === 'live')
-    if (sport === '__upcoming__') return allMatches.filter(m => m.status === 'upcoming')
+    // sport filter — __live__/__upcoming__ are sidebar tab states, not sport filters
+    if (sport === 'all' || sport === '__live__' || sport === '__upcoming__') return allMatches
     return allMatches.filter(m => m.cat === sport)
   }, [sport, allMatches])
 
@@ -325,21 +334,23 @@ export default function Home() {
             ))}
           </div>
 
+          {/* Live matches — hide when "Upcoming" tab selected */}
           {liveMatches.length > 0 && sport !== '__upcoming__' && (
             <>
-              <div style={{ padding: '8px 14px 4px', fontSize: 10, fontWeight: 700, color: '#6b7280', letterSpacing: '1px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ padding: '8px 14px 4px', fontSize: 10, fontWeight: 700, color: '#6b7280', letterSpacing: '1.2px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'pulse 1s infinite' }} />
-                Live Now · {liveMatches.length}
+                🔴 Live Now · {liveMatches.length}
               </div>
               {liveMatches.map(m => <MatchCard key={m.id} match={m} active={activeMatch?.id === m.id} onClick={() => selectMatch(m)} />)}
             </>
           )}
+          {/* Upcoming matches — hide when "Live" tab selected */}
           {upcomingMatches.length > 0 && sport !== '__live__' && (
             <>
-              <div style={{ padding: '8px 14px 4px', fontSize: 10, fontWeight: 700, color: '#6b7280', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                🕐 Upcoming · {upcomingMatches.length}
+              <div style={{ padding: '8px 14px 4px', fontSize: 10, fontWeight: 700, color: '#6b7280', letterSpacing: '1.2px', textTransform: 'uppercase' }}>
+                🕐 Next Matches · {upcomingMatches.length}
               </div>
-              {upcomingMatches.slice(0, 15).map(m => <MatchCard key={m.id} match={m} active={activeMatch?.id === m.id} onClick={() => selectMatch(m)} />)}
+              {upcomingMatches.slice(0, 20).map(m => <MatchCard key={m.id} match={m} active={activeMatch?.id === m.id} onClick={() => selectMatch(m)} />)}
             </>
           )}
           {!liveMatches.length && !upcomingMatches.length && (
