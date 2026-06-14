@@ -58,7 +58,13 @@ const SPORTS = [
   {key:'mma',cat:'mma'},{key:'motorsport',cat:'motorsport'},
 ]
 const LEAGUES = [
-  {id:'4328',cat:'football'},{id:'4794',cat:'cricket'},{id:'4450',cat:'cricket'},
+  {id:'4328',cat:'football'},  // FIFA WC 2026
+  {id:'4480',cat:'football'},  // UEFA Euro
+  {id:'4335',cat:'football'},  // EPL
+  {id:'4332',cat:'football'},  // La Liga
+  {id:'4794',cat:'cricket'},   // ICC
+  {id:'4450',cat:'cricket'},   // ICC Women T20
+  {id:'4452',cat:'cricket'},   // IPL
   {id:'4387',cat:'basketball'},{id:'4424',cat:'baseball'},{id:'4380',cat:'tennis'},{id:'4406',cat:'hockey'},
 ]
 
