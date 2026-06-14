@@ -37,64 +37,46 @@ export default function Home() {
   const [apiMatches, setApiMatches] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Load real matches from API
+  // Load real matches — no cache, always fresh
   useEffect(() => {
     const loadMatches = async () => {
       try {
-        const res = await fetch('/api/matches')
+        const res = await fetch(`/api/matches?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' }
+        })
         const data = await res.json()
         if (Array.isArray(data) && data.length > 0) {
-          const mapped = data.map((e, i) => ({
-            id: e.id || `api-${i}`,
-            cat: (e.category || 'football').toLowerCase(),
-            tournament: e.league || e.category || 'Live Match',
-            team1: {
-              name: e.teams?.home?.name || e.title?.split(' vs ')[0] || 'Home',
-              flag: getFlag(e.teams?.home?.name || '')
-            },
-            team2: {
-              name: e.teams?.away?.name || e.title?.split(' vs ')[1] || 'Away',
-              flag: getFlag(e.teams?.away?.name || '')
-            },
-            scoreA: e.score?.home ?? '',
-            scoreB: e.score?.away ?? '',
-            status: e.status === 'live' || e.live ? 'live' : 'upcoming',
-            time: e.startTime || e.date || 'TBA',
-            channels: ['espn', 'fox', 'bein', 'tnt'],
-          }))
-          setApiMatches(mapped)
+          // API now returns fully formatted events directly
+          setApiMatches(data)
         }
       } catch (e) {}
       setLoading(false)
     }
     loadMatches()
-    const interval = setInterval(loadMatches, 60000)
+    const interval = setInterval(loadMatches, 30000) // refresh every 30s
     return () => clearInterval(interval)
   }, [])
 
-  // Auto-play first live match on page load
+  // Auto-play first live match when API data loads
   useEffect(() => {
     if (activeMatch || activeChannel) return
-    const all = [...MATCHES, ...apiMatches.filter(m =>
+    const firstLive = apiMatches.find(m =>
+      m.status === 'live' &&
       m.team1?.name && m.team2?.name &&
       m.team1.name !== 'Home' && m.team2.name !== 'Away'
-    )]
-    const firstLive = all.find(m => m.status === 'live')
+    )
     if (firstLive) selectMatch(firstLive)
   }, [apiMatches])
 
-  // Static MATCHES সবসময় দেখাবে, API থেকে valid matches extra add হবে
-  const allMatches = (() => {
-    const staticIds = new Set(MATCHES.map(m => m.id))
-    // Only add API matches that have real team names (not "Home"/"Away")
-    const validApi = apiMatches.filter(m =>
-      m.team1?.name && m.team2?.name &&
-      m.team1.name !== 'Home' && m.team2.name !== 'Away' &&
-      m.team1.name !== 'TBA' && m.team2.name !== 'TBA' &&
-      !staticIds.has(m.id)
-    )
-    return [...MATCHES, ...validApi]
-  })()
+  // শুধু API থেকে real-time data — static পুরনো matches দেখাবে না
+  const allMatches = apiMatches.length > 0
+    ? apiMatches.filter(m =>
+        m.team1?.name && m.team2?.name &&
+        m.team1.name !== 'Home' && m.team2.name !== 'Away' &&
+        m.team1.name !== 'TBA' && m.team2.name !== 'TBA'
+      )
+    : MATCHES // fallback শুধু API সম্পূর্ণ fail করলে
 
   const filtered = useCallback(() => {
     // sport filter — __live__/__upcoming__ are sidebar tab states, not sport filters
