@@ -230,9 +230,6 @@ export default function Home() {
           Stream<span style={{ color: '#e50914' }}>Flix</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8' }}>
-            👁 {Object.values(viewers).reduce((a, b) => a + b, 0).toLocaleString()} watching
-          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: '#ef4444' }}>
             <div style={{
               width: 7, height: 7, borderRadius: '50%', background: '#ef4444',
@@ -435,7 +432,7 @@ export default function Home() {
                   }}
                 >
                   {ch.icon} {ch.name}
-                  <span style={{ fontSize: 9, opacity: 0.75 }}>👁 {viewers[ch.id] || 0}</span>
+                  
                 </button>
               ))}
             </div>
