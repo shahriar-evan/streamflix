@@ -107,13 +107,17 @@ const FLAGS = {
 const getFlag = (name='') => {
   if (!name) return '🏳️'
   if (FLAGS[name]) return FLAGS[name]
-  // Case-insensitive + partial match
   const nl = name.toLowerCase()
   for (const [k,v] of Object.entries(FLAGS)) {
     if (nl === k.toLowerCase()) return v
     if (nl.includes(k.toLowerCase()) && k.length > 4) return v
   }
-  return '🏳️'
+  // Generic sport emoji based on context
+  if (/united|city|fc |sport|athletic|club|real |inter |ac /i.test(name)) return '⚽'
+  if (/yankee|red sox|dodger|cubs|mets|astro|braves/i.test(name)) return '⚾'
+  if (/lake|celtic|warrior|buck|heat|suns|knick/i.test(name)) return '🏀'
+  if (/maple|ranger|penguin|hawk|shark|capital/i.test(name)) return '🏒'
+  return '🏴'
 }
 
 export default function Home() {
