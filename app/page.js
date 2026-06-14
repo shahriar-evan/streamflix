@@ -146,28 +146,18 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [])
 
-  // When API data arrives, switch to best live/today match
+  // Auto-play ONLY if there's a live match
   useEffect(() => {
     if (apiMatches.length === 0) return
-    const now = new Date()
-    const today = now.toISOString().slice(0, 10) // "2026-06-15"
     const valid = apiMatches.filter(m =>
       m.team1?.name && m.team2?.name &&
       m.team1.name !== 'Home' && m.team2.name !== 'Away' &&
       m.team1.name.length > 1 && m.team2.name.length > 1
     )
-    // Skip past matches — only today or future
-    const relevant = valid.filter(m => {
-      if (m.status === 'live') return true
-      const dateStr = m.time?.slice(0, 10) // "2026-06-15"
-      if (!dateStr || dateStr.length < 10) return true
-      return dateStr >= today
-    })
-    const pick =
-      relevant.find(m => m.status === 'live') ||
-      relevant.find(m => m.hot) ||
-      relevant[0]
-    if (pick) selectMatch(pick)
+    // Only auto-select if there's a live match — never auto-select future/upcoming
+    const live = valid.find(m => m.status === 'live')
+    if (live) selectMatch(live)
+    // No live match? Leave player blank — user chooses
   }, [apiMatches])
 
   // শুধু API থেকে real-time data — static পুরনো matches দেখাবে না
