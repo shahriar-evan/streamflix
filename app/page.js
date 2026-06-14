@@ -12,21 +12,63 @@ const SPORT_ICONS = {
 const si = (s) => SPORT_ICONS[(s || '').toLowerCase()] || '🏆'
 
 const FLAGS = {
-  'Mexico':'🇲🇽','South Africa':'🇿🇦','Brazil':'🇧🇷','Argentina':'🇦🇷',
-  'England':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','France':'🇫🇷','Germany':'🇩🇪','Spain':'🇪🇸',
-  'USA':'🇺🇸','United States':'🇺🇸','Portugal':'🇵🇹','Italy':'🇮🇹',
-  'Netherlands':'🇳🇱','Belgium':'🇧🇪','Croatia':'🇭🇷','Morocco':'🇲🇦',
-  'Japan':'🇯🇵','South Korea':'🇰🇷','Australia':'🇦🇺','Canada':'🇨🇦',
+  // Americas
+  'Mexico':'🇲🇽','Brazil':'🇧🇷','Argentina':'🇦🇷','USA':'🇺🇸','United States':'🇺🇸',
+  'Canada':'🇨🇦','Ecuador':'🇪🇨','Colombia':'🇨🇴','Chile':'🇨🇱','Peru':'🇵🇪',
+  'Uruguay':'🇺🇾','Paraguay':'🇵🇾','Bolivia':'🇧🇴','Venezuela':'🇻🇪','Panama':'🇵🇦',
+  'Costa Rica':'🇨🇷','Honduras':'🇭🇳','Jamaica':'🇯🇲','Haiti':'🇭🇹','Cuba':'🇨🇺',
+  'Trinidad and Tobago':'🇹🇹','Curaçao':'🏝️','Guatemala':'🇬🇹','El Salvador':'🇸🇻',
+  // Europe
+  'England':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','Scotland':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','Wales':'🏴󠁧󠁢󠁷󠁬󠁳󠁿','Germany':'🇩🇪','France':'🇫🇷',
+  'Spain':'🇪🇸','Italy':'🇮🇹','Portugal':'🇵🇹','Netherlands':'🇳🇱','Belgium':'🇧🇪',
+  'Croatia':'🇭🇷','Poland':'🇵🇱','Denmark':'🇩🇰','Sweden':'🇸🇪','Norway':'🇳🇴',
+  'Finland':'🇫🇮','Switzerland':'🇨🇭','Austria':'🇦🇹','Czech Republic':'🇨🇿','Czechia':'🇨🇿',
+  'Hungary':'🇭🇺','Romania':'🇷🇴','Serbia':'🇷🇸','Ukraine':'🇺🇦','Russia':'🇷🇺',
+  'Greece':'🇬🇷','Turkey':'🇹🇷','Türkiye':'🇹🇷','Slovakia':'🇸🇰','Slovenia':'🇸🇮',
+  'Albania':'🇦🇱','Bosnia and Herzegovina':'🇧🇦','Bosnia':'🇧🇦','Kosovo':'🇽🇰',
+  'North Macedonia':'🇲🇰','Montenegro':'🇲🇪','Bulgaria':'🇧🇬','Iceland':'🇮🇸',
+  'Republic of Ireland':'🇮🇪','Ireland':'🇮🇪','Luxembourg':'🇱🇺','Moldova':'🇲🇩',
+  'Georgia':'🇬🇪','Armenia':'🇦🇲','Azerbaijan':'🇦🇿','Cyprus':'🇨🇾','Malta':'🇲🇹',
+  'Ivory Coast':'🇨🇮',"Côte d'Ivoire":'🇨🇮',
+  // Africa
+  'South Africa':'🇿🇦','Morocco':'🇲🇦','Nigeria':'🇳🇬','Ghana':'🇬🇭','Senegal':'🇸🇳',
+  'Egypt':'🇪🇬','Cameroon':'🇨🇲','Algeria':'🇩🇿','Tunisia':'🇹🇳','Mali':'🇲🇱',
+  'Burkina Faso':'🇧🇫','Guinea':'🇬🇳','Zambia':'🇿🇲','Zimbabwe':'🇿🇼','Kenya':'🇰🇪',
+  'Tanzania':'🇹🇿','Ethiopia':'🇪🇹','Uganda':'🇺🇬','Angola':'🇦🇴','Congo':'🇨🇬',
+  // Asia
+  'Japan':'🇯🇵','South Korea':'🇰🇷','Australia':'🇦🇺','Saudi Arabia':'🇸🇦',
+  'Qatar':'🇶🇦','Iran':'🇮🇷','UAE':'🇦🇪','Uzbekistan':'🇺🇿','China':'🇨🇳',
+  'Indonesia':'🇮🇩','Thailand':'🇹🇭','Vietnam':'🇻🇳','Philippines':'🇵🇭',
+  // Cricket specific
   'Bangladesh':'🇧🇩','India':'🇮🇳','Pakistan':'🇵🇰','West Indies':'🏝️',
   'Afghanistan':'🇦🇫','Sri Lanka':'🇱🇰','New Zealand':'🇳🇿',
-  'Saudi Arabia':'🇸🇦','Qatar':'🇶🇦','Ecuador':'🇪🇨','Switzerland':'🇨🇭',
-  'Uruguay':'🇺🇾','Colombia':'🇨🇴','Chile':'🇨🇱','Peru':'🇵🇪',
-  'Türkiye':'🇹🇷','Turkey':'🇹🇷','Haiti':'🇭🇹','Scotland':'🏴󠁧󠁢󠁳󠁣󠁴󠁿',
-  'Curaçao':'🏝️','Australia-W':'🇦🇺','South Africa-W':'🇿🇦',
+  'WI':'🏝️','WI-W':'🏝️','NZ-W':'🇳🇿','BAN-W':'🇧🇩','IND-W':'🇮🇳',
+  'PAK-W':'🇵🇰','NED-W':'🇳🇱','AUS-W':'🇦🇺','SA-W':'🇿🇦',
   'West Indies-W':'🏝️','New Zealand-W':'🇳🇿','Bangladesh-W':'🇧🇩',
   'Netherlands-W':'🇳🇱','India-W':'🇮🇳','Pakistan-W':'🇵🇰',
+  // Teams
+  'Boston Celtics':'🍀','Dallas Mavericks':'⭐','Golden State Warriors':'🌉',
+  'OKC Thunder':'⚡','Pittsburgh Pirates':'⚾','Miami Marlins':'🐟',
+  'Washington Nationals':'🦅','Seattle Mariners':'🧭',
+  'Vegas Golden Knights':'⚔️','Carolina Hurricanes':'🌀',
+  'Edmonton Oilers':'🛢️','Florida Panthers':'🐆',
+  // Tennis
+  'Djokovic':'🇷🇸','Alcaraz':'🇪🇸','Swiatek':'🇵🇱','Sabalenka':'🇧🇾',
+  'Nadal':'🇪🇸','Federer':'🇨🇭','Medvedev':'🇷🇺','Zverev':'🇩🇪',
+  // Italian Serie A teams (for API)
+  'Udinese':'🏴','Como':'🏴','Juventus':'⚫','Milan':'🔴','Inter':'🔵',
+  'Roma':'🟡','Napoli':'🔵','Lazio':'🔵','Fiorentina':'🟣','Atalanta':'🔵',
 }
-const getFlag = (name) => FLAGS[name] || '🏳️'
+
+const getFlag = (name='') => {
+  if (!name) return '🏳️'
+  if (FLAGS[name]) return FLAGS[name]
+  // Partial match for "-W" teams etc
+  for (const [k,v] of Object.entries(FLAGS)) {
+    if (name.toLowerCase() === k.toLowerCase()) return v
+  }
+  return '🏳️'
+}
 
 export default function Home() {
   const [sport, setSport] = useState('all')
