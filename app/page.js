@@ -72,6 +72,17 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [])
 
+  // Auto-play first live match on page load
+  useEffect(() => {
+    if (activeMatch || activeChannel) return
+    const all = [...MATCHES, ...apiMatches.filter(m =>
+      m.team1?.name && m.team2?.name &&
+      m.team1.name !== 'Home' && m.team2.name !== 'Away'
+    )]
+    const firstLive = all.find(m => m.status === 'live')
+    if (firstLive) selectMatch(firstLive)
+  }, [apiMatches])
+
   // Static MATCHES সবসময় দেখাবে, API থেকে valid matches extra add হবে
   const allMatches = (() => {
     const staticIds = new Set(MATCHES.map(m => m.id))
