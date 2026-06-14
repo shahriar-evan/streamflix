@@ -72,6 +72,33 @@ const FLAGS = {
   // Tennis
   'Djokovic':'🇷🇸','Alcaraz':'🇪🇸','Swiatek':'🇵🇱','Sabalenka':'🇧🇾',
   'Nadal':'🇪🇸','Federer':'🇨🇭','Medvedev':'🇷🇺','Zverev':'🇩🇪',
+  // Italian Serie A teams
+  'Udinese':'🏴‍☠️','Como':'🏔️','Juventus':'⚫','Milan':'🔴','Inter':'🔵',
+  'AC Milan':'🔴','Inter Milan':'🔵','Roma':'🟡','Napoli':'🔵','Lazio':'🔵',
+  'Fiorentina':'🟣','Atalanta':'🔵','Torino':'🔴','Genoa':'🔵','Cagliari':'🔴',
+  'Bologna':'🔴','Verona':'🟡','Sassuolo':'🟢','Lecce':'🟡','Empoli':'🔵',
+  'Venezia':'🟠','Parma':'🟡','Monza':'🔴','Frosinone':'🟡','Salernitana':'🔴',
+  // La Liga teams
+  'Real Madrid':'⚪','Barcelona':'🔵','Atletico Madrid':'🔴','Sevilla':'🔴',
+  'Valencia':'🦇','Athletic Bilbao':'🔴','Real Sociedad':'🔵','Villarreal':'🟡',
+  'Real Betis':'🟢','Osasuna':'🔴','Mallorca':'🔴','Girona':'🔴',
+  // Bundesliga teams
+  'Bayern Munich':'🔴','Borussia Dortmund':'🟡','RB Leipzig':'🔴',
+  'Bayer Leverkusen':'🔴','Eintracht Frankfurt':'🔴','Wolfsburg':'🟢',
+  // Ligue 1 teams
+  'PSG':'🔵','Paris Saint-Germain':'🔵','Marseille':'🔵','Lyon':'🔴',
+  'Monaco':'🔴','Lille':'🔴','Nice':'🔴','Rennes':'🔴',
+  // Premier League teams
+  'Arsenal':'🔴','Chelsea':'🔵','Liverpool':'🔴','Manchester City':'🔵',
+  'Manchester United':'🔴','Tottenham':'⚪','Newcastle':'⚫','Aston Villa':'🟣',
+  'West Ham':'🔵','Brighton':'🔵','Crystal Palace':'🔴','Fulham':'⚪',
+  'Brentford':'🔴','Wolves':'🟡','Everton':'🔵','Nottingham Forest':'🔴',
+  'Burnley':'🟣','Luton':'🟠','Sheffield United':'🔴',
+  // Argentinian teams
+  'Atlético Tucumán':'🔵','Independiente Rivadavia':'🔴','Boca Juniors':'🟡',
+  'River Plate':'🔴','Racing Club':'🔵','San Lorenzo':'🔵','Vélez Sársfield':'🔵',
+  // Uzbekistan
+  'Andijon':'🇺🇿','Surkhon Termez':'🇺🇿','Lokomotiv Tashkent':'🇺🇿',
   // Italian Serie A teams (for API)
   'Udinese':'🏴','Como':'🏴','Juventus':'⚫','Milan':'🔴','Inter':'🔵',
   'Roma':'🟡','Napoli':'🔵','Lazio':'🔵','Fiorentina':'🟣','Atalanta':'🔵',
