@@ -326,11 +326,13 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* CHANNEL TABS — KickBD style, always visible at top */}
+      {/* CHANNEL TABS — sticky below nav */}
       <div style={{
         display: 'flex', gap: 6, padding: '8px 16px',
         background: '#fff', borderBottom: '2px solid #e5e7eb',
-        overflowX: 'auto', scrollbarWidth: 'none', alignItems: 'center'
+        overflowX: 'auto', scrollbarWidth: 'none', alignItems: 'center',
+        position: 'sticky', top: 54, zIndex: 90,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
       }}>
         {WC_CHANNELS.map(ch => (
           <button

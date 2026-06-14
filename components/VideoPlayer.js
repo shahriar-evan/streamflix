@@ -166,9 +166,11 @@ export default function VideoPlayer({ url, onStreamFail }) {
   return (
     <div style={{ position: 'relative', background: '#000', aspectRatio: '16/9', maxHeight: '62vh' }}>
       {!url && (
-        <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'linear-gradient(135deg,#0a0a0f,#1a1a28)' }}>
-          <div style={{ fontSize:52, opacity:0.12 }}>▶</div>
-          <p style={{ color:'#666', fontSize:13, marginTop:12 }}>Select a match or channel to watch live</p>
+        <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'linear-gradient(135deg,#0a0a0f,#1a1a28)', gap:14, padding:24, textAlign:'center' }}>
+          <div style={{ fontSize:54, opacity:0.15 }}>📺</div>
+          <p style={{ color:'#aaa', fontSize:15, fontWeight:700, margin:0 }}>এখন কোনো Live Match নেই</p>
+          <p style={{ color:'#555', fontSize:12, margin:0 }}>উপরের channel tabs থেকে যেকোনো channel বেছে নাও</p>
+          <p style={{ color:'#444', fontSize:11, margin:0 }}>অথবা বাম দিকের upcoming matches থেকে select করো</p>
         </div>
       )}
 
