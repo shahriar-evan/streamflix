@@ -100,23 +100,18 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [])
 
-  // Auto-play: first live match, then first upcoming if no live
+  // When API data arrives, always switch to best live match automatically
   useEffect(() => {
-    if (activeMatch || activeChannel) return
+    if (apiMatches.length === 0) return
     const valid = apiMatches.filter(m =>
       m.team1?.name && m.team2?.name &&
       m.team1.name !== 'Home' && m.team2.name !== 'Away'
     )
     const pick = valid.find(m => m.status === 'live') || valid[0]
-    if (pick) selectMatch(pick)
+    if (!pick) return
+    // Always update — replace stale static match with fresh API data
+    selectMatch(pick)
   }, [apiMatches])
-
-  // Also auto-play from static MATCHES on initial load (before API)
-  useEffect(() => {
-    if (activeMatch || activeChannel) return
-    const firstLive = MATCHES.find(m => m.status === 'live')
-    if (firstLive) selectMatch(firstLive)
-  }, [])
 
   // শুধু API থেকে real-time data — static পুরনো matches দেখাবে না
   const allMatches = apiMatches.length > 0
