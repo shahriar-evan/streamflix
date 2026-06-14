@@ -30,13 +30,22 @@ export default function VideoPlayer({ url, onStreamFail }) {
     if (Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
-        lowLatencyMode: true,
+        lowLatencyMode: false,
         autoLevelEnabled: true,
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-        fragLoadingMaxRetry: 6,
-        manifestLoadingMaxRetry: 4,
-        levelLoadingMaxRetry: 4,
+        startLevel: -1,
+        maxBufferLength: 45,
+        maxMaxBufferLength: 90,
+        maxBufferHole: 0.5,
+        highBufferWatchdogPeriod: 2,
+        nudgeOffset: 0.2,
+        nudgeMaxRetry: 5,
+        fragLoadingMaxRetry: 8,
+        fragLoadingRetryDelay: 500,
+        manifestLoadingMaxRetry: 5,
+        manifestLoadingRetryDelay: 500,
+        levelLoadingMaxRetry: 5,
+        levelLoadingRetryDelay: 500,
+        appendErrorMaxRetry: 5,
       })
       hlsRef.current = hls
       hls.loadSource(src)
@@ -49,19 +58,33 @@ export default function VideoPlayer({ url, onStreamFail }) {
         setQualityLevels(levels)
       })
       let failCount = 0
+      let mediaRecovery = false
       hls.on(Hls.Events.ERROR, (_, d) => {
-        if (d.fatal) {
-          failCount++
-          if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
-            if (failCount < 3) hls.startLoad()
-            else { failCount = 0; onStreamFail?.() }
-          } else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
-            hls.recoverMediaError()
+        if (!d.fatal) return
+        failCount++
+        console.warn('HLS error:', d.type, d.details, 'count:', failCount)
+        if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          if (failCount <= 4) {
+            setTimeout(() => hls.startLoad(), 1000 * failCount)
           } else {
+            failCount = 0
             onStreamFail?.()
           }
+        } else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
+          if (!mediaRecovery) {
+            mediaRecovery = true
+            hls.recoverMediaError()
+          } else {
+            // Can't recover — try next server
+            onStreamFail?.()
+          }
+        } else {
+          onStreamFail?.()
         }
       })
+
+      // Reset media recovery flag on success
+      hls.on(Hls.Events.FRAG_LOADED, () => { mediaRecovery = false; failCount = 0 })
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = src
       video.play().catch(() => {})

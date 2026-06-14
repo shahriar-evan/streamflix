@@ -46,12 +46,29 @@ const FLAGS = {
   'PAK-W':'🇵🇰','NED-W':'🇳🇱','AUS-W':'🇦🇺','SA-W':'🇿🇦',
   'West Indies-W':'🏝️','New Zealand-W':'🇳🇿','Bangladesh-W':'🇧🇩',
   'Netherlands-W':'🇳🇱','India-W':'🇮🇳','Pakistan-W':'🇵🇰',
-  // Teams
+  // MLB Teams
+  'New York Yankees':'⚾','Boston Red Sox':'🧦','Los Angeles Dodgers':'⚾',
+  'Chicago Cubs':'🐻','San Francisco Giants':'⚾','Houston Astros':'⭐',
+  'Atlanta Braves':'🪓','Philadelphia Phillies':'🔔','New York Mets':'🍎',
+  'Washington Nationals':'🦅','Seattle Mariners':'🧭','Pittsburgh Pirates':'⚾',
+  'Miami Marlins':'🐟','Minnesota Twins':'🌲','St. Louis Cardinals':'🔴',
+  'Chicago White Sox':'⚾','Colorado Rockies':'⛰️','Cincinnati Reds':'🔴',
+  'Arizona Diamondbacks':'💎','San Diego Padres':'🟤','Tampa Bay Rays':'🌊',
+  'Detroit Tigers':'🐯','Kansas City Royals':'👑','Baltimore Orioles':'🐦',
+  'Toronto Blue Jays':'🦅','Milwaukee Brewers':'🍺','Oakland Athletics':'🐘',
+  'Texas Rangers':'⭐','Cleveland Guardians':'🛡️','Los Angeles Angels':'😇',
+  // NHL Teams
   'Boston Celtics':'🍀','Dallas Mavericks':'⭐','Golden State Warriors':'🌉',
-  'OKC Thunder':'⚡','Pittsburgh Pirates':'⚾','Miami Marlins':'🐟',
-  'Washington Nationals':'🦅','Seattle Mariners':'🧭',
-  'Vegas Golden Knights':'⚔️','Carolina Hurricanes':'🌀',
-  'Edmonton Oilers':'🛢️','Florida Panthers':'🐆',
+  'OKC Thunder':'⚡','Vegas Golden Knights':'⚔️','Carolina Hurricanes':'🌀',
+  'Edmonton Oilers':'🛢️','Florida Panthers':'🐆','Toronto Maple Leafs':'🍁',
+  'New York Rangers':'🗽','Colorado Avalanche':'⛰️','Tampa Bay Lightning':'⚡',
+  'Pittsburgh Penguins':'🐧','Chicago Blackhawks':'🦅','Montreal Canadiens':'🍁',
+  'Detroit Red Wings':'🔴','Dallas Stars':'⭐','San Jose Sharks':'🦈',
+  // NBA Teams
+  'Los Angeles Lakers':'💜','Golden State Warriors':'🌉','Milwaukee Bucks':'🦌',
+  'Phoenix Suns':'☀️','Miami Heat':'🔥','Brooklyn Nets':'🕸️',
+  'Philadelphia 76ers':'🔔','Denver Nuggets':'⛏️','Memphis Grizzlies':'🐻',
+  'New Orleans Pelicans':'🦢','Oklahoma City Thunder':'⚡',
   // Tennis
   'Djokovic':'🇷🇸','Alcaraz':'🇪🇸','Swiatek':'🇵🇱','Sabalenka':'🇧🇾',
   'Nadal':'🇪🇸','Federer':'🇨🇭','Medvedev':'🇷🇺','Zverev':'🇩🇪',
@@ -63,9 +80,11 @@ const FLAGS = {
 const getFlag = (name='') => {
   if (!name) return '🏳️'
   if (FLAGS[name]) return FLAGS[name]
-  // Partial match for "-W" teams etc
+  // Case-insensitive + partial match
+  const nl = name.toLowerCase()
   for (const [k,v] of Object.entries(FLAGS)) {
-    if (name.toLowerCase() === k.toLowerCase()) return v
+    if (nl === k.toLowerCase()) return v
+    if (nl.includes(k.toLowerCase()) && k.length > 4) return v
   }
   return '🏳️'
 }
@@ -103,18 +122,24 @@ export default function Home() {
   // When API data arrives, switch to best live/today match
   useEffect(() => {
     if (apiMatches.length === 0) return
-    const today = new Date().toISOString().slice(0, 10) // "2026-06-15"
+    const now = new Date()
+    const today = now.toISOString().slice(0, 10) // "2026-06-15"
     const valid = apiMatches.filter(m =>
       m.team1?.name && m.team2?.name &&
       m.team1.name !== 'Home' && m.team2.name !== 'Away' &&
       m.team1.name.length > 1 && m.team2.name.length > 1
     )
-    // Priority: 1) live now, 2) today upcoming, 3) first available
+    // Skip past matches — only today or future
+    const relevant = valid.filter(m => {
+      if (m.status === 'live') return true
+      const dateStr = m.time?.slice(0, 10) // "2026-06-15"
+      if (!dateStr || dateStr.length < 10) return true
+      return dateStr >= today
+    })
     const pick =
-      valid.find(m => m.status === 'live') ||
-      valid.find(m => m.time?.includes(today)) ||
-      valid.find(m => m.hot) ||
-      valid[0]
+      relevant.find(m => m.status === 'live') ||
+      relevant.find(m => m.hot) ||
+      relevant[0]
     if (pick) selectMatch(pick)
   }, [apiMatches])
 
