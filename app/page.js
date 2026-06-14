@@ -739,14 +739,14 @@ function MatchCard({ match, active, onClick }) {
         {/* Team badges / flags */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 600, color: '#111827' }}>
-            <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{match.team1.flag}</span>
+            <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{getFlag(match.team1.name) !== '🏳️' ? getFlag(match.team1.name) : match.team1.flag}</span>
             <span style={{ flex: 1 }}>{match.team1.name}</span>
             {match.scoreA !== '' && match.scoreA !== undefined && (
               <span style={{ fontSize: 16, fontWeight: 800, color: '#111827', minWidth: 20, textAlign: 'right' }}>{match.scoreA}</span>
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 600, color: '#111827' }}>
-            <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{match.team2.flag}</span>
+            <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{getFlag(match.team2.name) !== '🏳️' ? getFlag(match.team2.name) : match.team2.flag}</span>
             <span style={{ flex: 1 }}>{match.team2.name}</span>
             {match.scoreB !== '' && match.scoreB !== undefined && (
               <span style={{ fontSize: 16, fontWeight: 800, color: '#111827', minWidth: 20, textAlign: 'right' }}>{match.scoreB}</span>
