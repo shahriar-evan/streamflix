@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
 
-export default function VideoPlayer({ url }) {
+export default function VideoPlayer({ url, onStreamFail }) {
   const videoRef = useRef(null)
   const hlsRef = useRef(null)
   const [quality, setQuality] = useState('auto')
@@ -48,10 +48,18 @@ export default function VideoPlayer({ url }) {
           .sort((a, b) => (parseInt(b.label) || 0) - (parseInt(a.label) || 0))
         setQualityLevels(levels)
       })
+      let failCount = 0
       hls.on(Hls.Events.ERROR, (_, d) => {
         if (d.fatal) {
-          if (d.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad()
-          else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError()
+          failCount++
+          if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
+            if (failCount < 3) hls.startLoad()
+            else { failCount = 0; onStreamFail?.() }
+          } else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
+            hls.recoverMediaError()
+          } else {
+            onStreamFail?.()
+          }
         }
       })
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {

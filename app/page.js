@@ -100,17 +100,22 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [])
 
-  // When API data arrives, always switch to best live match automatically
+  // When API data arrives, switch to best live/today match
   useEffect(() => {
     if (apiMatches.length === 0) return
+    const today = new Date().toISOString().slice(0, 10) // "2026-06-15"
     const valid = apiMatches.filter(m =>
       m.team1?.name && m.team2?.name &&
-      m.team1.name !== 'Home' && m.team2.name !== 'Away'
+      m.team1.name !== 'Home' && m.team2.name !== 'Away' &&
+      m.team1.name.length > 1 && m.team2.name.length > 1
     )
-    const pick = valid.find(m => m.status === 'live') || valid[0]
-    if (!pick) return
-    // Always update — replace stale static match with fresh API data
-    selectMatch(pick)
+    // Priority: 1) live now, 2) today upcoming, 3) first available
+    const pick =
+      valid.find(m => m.status === 'live') ||
+      valid.find(m => m.time?.includes(today)) ||
+      valid.find(m => m.hot) ||
+      valid[0]
+    if (pick) selectMatch(pick)
   }, [apiMatches])
 
   // শুধু API থেকে real-time data — static পুরনো matches দেখাবে না
@@ -234,6 +239,19 @@ export default function Home() {
   const selectServer = (srv) => {
     setActiveServer(srv)
     setStreamUrl(srv.url)
+  }
+
+  // Auto-try next server when current stream fails
+  const tryNextServer = () => {
+    if (!activeChannel) return
+    const servers = activeChannel.servers
+    const currentIdx = servers.findIndex(s => s.label === activeServer?.label)
+    const nextIdx = (currentIdx + 1) % servers.length
+    if (nextIdx !== currentIdx) {
+      const next = servers[nextIdx]
+      setActiveServer(next)
+      setStreamUrl(next.url)
+    }
   }
 
   const getMatchChannels = (match) => {
@@ -396,7 +414,7 @@ export default function Home() {
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
 
           {/* VIDEO */}
-          <VideoPlayer url={streamUrl} />
+          <VideoPlayer url={streamUrl} onStreamFail={tryNextServer} />
 
           {/* MATCH INFO */}
           {activeMatch && (
