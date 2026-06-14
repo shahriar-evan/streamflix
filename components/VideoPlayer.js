@@ -168,9 +168,9 @@ export default function VideoPlayer({ url, onStreamFail }) {
       {!url && (
         <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'linear-gradient(135deg,#0a0a0f,#1a1a28)', gap:14, padding:24, textAlign:'center' }}>
           <div style={{ fontSize:54, opacity:0.15 }}>📺</div>
-          <p style={{ color:'#aaa', fontSize:15, fontWeight:700, margin:0 }}>এখন কোনো Live Match নেই</p>
-          <p style={{ color:'#555', fontSize:12, margin:0 }}>উপরের channel tabs থেকে যেকোনো channel বেছে নাও</p>
-          <p style={{ color:'#444', fontSize:11, margin:0 }}>অথবা বাম দিকের upcoming matches থেকে select করো</p>
+          <p style={{ color:'#aaa', fontSize:15, fontWeight:700, margin:0 }}>No Live Match Right Now</p>
+          <p style={{ color:'#555', fontSize:12, margin:0 }}>Select any channel from the tabs above</p>
+          <p style={{ color:'#444', fontSize:11, margin:0 }}>Or pick an upcoming match from the sidebar</p>
         </div>
       )}
 
