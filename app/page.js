@@ -251,21 +251,9 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [])
 
-  const tryServersAuto = async (ch) => {
-    setAutoTrying(true)
-    for (let i = 0; i < ch.servers.length; i++) {
-      const srv = ch.servers[i]
-      try {
-        const res = await fetch(srv.url, { method: 'HEAD', signal: AbortSignal.timeout(3000) })
-        if (res.ok) {
-          setActiveServer(srv)
-          setStreamUrl(srv.url)
-          setAutoTrying(false)
-          return
-        }
-      } catch (e) {}
-    }
-    // fallback to first
+  const tryServersAuto = (ch) => {
+    // Directly load first server — no HEAD check (proxied URLs don't respond to HEAD)
+    setAutoTrying(false)
     setActiveServer(ch.servers[0])
     setStreamUrl(ch.servers[0].url)
     setAutoTrying(false)
