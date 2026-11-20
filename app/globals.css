@@ -640,3 +640,8 @@ img { display: block; }
   .hl-body { grid-template-columns: minmax(0, 1fr) 340px; overflow: hidden; }
   .hl-list { max-height: calc(100vh - 120px); border-left: 1px solid var(--border); }
 }
+
+/* ── Google AdSense unit ───────────────────────────── */
+.adsense { position: relative; border-radius: var(--radius); overflow: hidden; background: var(--surface); border: 1px solid var(--border2); padding: 8px; min-width: 0; }
+.mgrid .adsense, .hgrid .adsense { grid-column: 1 / -1; }
+.adsense .ad-tag { z-index: 2; }

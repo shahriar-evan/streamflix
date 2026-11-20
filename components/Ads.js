@@ -1,6 +1,7 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { usePlan, PRO_PRICE } from '../lib/plan'
+import { ADSENSE_CLIENT, ADSENSE_SLOT_BANNER } from '../lib/site'
 import Icon from './Icon'
 import { BrandMark } from './Brand'
 
@@ -12,9 +13,36 @@ const CREATIVES = [
   { title: 'Never miss a goal', body: 'Pro starts streams instantly — skip the wait.', cta: 'Go Pro', pro: true, bg: 'linear-gradient(135deg,#b45309,#9f1239)' },
 ]
 
+// Real Google AdSense unit (used when NEXT_PUBLIC_ADSENSE_CLIENT is set)
+function AdSenseUnit({ slim }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    if (ref.current?.dataset.loaded) return
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({})
+      if (ref.current) ref.current.dataset.loaded = '1'
+    } catch {}
+  }, [])
+  return (
+    <div className={`adsense ${slim ? 'slim' : ''}`}>
+      <span className="ad-tag">Ad</span>
+      <ins
+        ref={ref}
+        className="adsbygoogle"
+        style={{ display: 'block', minHeight: slim ? 60 : 90 }}
+        data-ad-client={ADSENSE_CLIENT}
+        {...(ADSENSE_SLOT_BANNER && { 'data-ad-slot': ADSENSE_SLOT_BANNER })}
+        data-ad-format={slim ? 'horizontal' : 'auto'}
+        data-full-width-responsive="true"
+      />
+    </div>
+  )
+}
+
 export function AdBanner({ onGoPro, index = 0, slim = false }) {
   const { pro } = usePlan()
   if (pro) return null
+  if (ADSENSE_CLIENT) return <AdSenseUnit slim={slim} />
   const c = CREATIVES[index % CREATIVES.length]
   return (
     <div className={`adbanner ${slim ? 'slim' : ''}`} style={{ background: c.bg }}>

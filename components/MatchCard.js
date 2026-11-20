@@ -41,14 +41,14 @@ export function StatusBadge({ m }) {
     return (
       <span className="mstatus">
         <span className="ft-pill">{m.sport === 'cricket' ? 'Result' : 'FT'}</span>
-        <span className="mdate">{formatDate(m.start)}</span>
+        <span className="mdate" suppressHydrationWarning>{formatDate(m.start)}</span>
       </span>
     )
   }
   return (
     <span className="mstatus">
-      <span className="mtime">{formatTime(m.start)}</span>
-      <span className="mdate">{formatDate(m.start)}</span>
+      <span className="mtime" suppressHydrationWarning>{formatTime(m.start)}</span>
+      <span className="mdate" suppressHydrationWarning>{formatDate(m.start)}</span>
     </span>
   )
 }
