@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { sportOf } from '../lib/data'
-import { colorFor, formatDate, formatTime, initials } from '../lib/format'
+import { colorFor, formatDate, formatTime, initials, matchPath } from '../lib/format'
 import Icon from './Icon'
 
 export function TeamLogo({ team, size = 52 }) {
@@ -59,7 +59,15 @@ export default function MatchCard({ m, onClick, action, compact }) {
   const sport = sportOf(m.sport)
   const longScores = m.sport === 'cricket'
   return (
-    <button className={`mcard ${m.status === 'live' ? 'is-live' : ''} ${compact ? 'compact' : ''}`} onClick={onClick}>
+    <a
+      href={matchPath(m)}
+      className={`mcard ${m.status === 'live' ? 'is-live' : ''} ${compact ? 'compact' : ''}`}
+      onClick={(e) => {
+        if (!onClick || e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return // allow "open in new tab"
+        e.preventDefault()
+        onClick()
+      }}
+    >
       <div className="mcard-top">
         <span className="mleague">
           {m.leagueLogo ? <img src={m.leagueLogo} alt="" /> : <span className="mleague-ico">{sport.icon}</span>}
@@ -97,6 +105,6 @@ export default function MatchCard({ m, onClick, action, compact }) {
           {action && <span className="maction"><Icon name="playBox" size={16} />{action}</span>}
         </div>
       )}
-    </button>
+    </a>
   )
 }

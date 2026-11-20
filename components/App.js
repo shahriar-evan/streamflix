@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CHANNELS, CHANNEL_CATEGORIES, SPORTS } from '../lib/data'
-import { isRecent } from '../lib/format'
+import { isRecent, matchPath } from '../lib/format'
 import { check } from '../lib/streams'
 import Icon from './Icon'
 import { Logo } from './Brand'
@@ -31,7 +31,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch {} },
 }
 
-export default function App({ initialMatches = [] }) {
+export default function App({ initialMatches = [], initialMatchId = null }) {
   const [splash, setSplash] = useState(true)
   const [tab, setTab] = useState('home')
   const [sport, setSport] = useState('all')
@@ -39,7 +39,7 @@ export default function App({ initialMatches = [] }) {
   const [matches, setMatches] = useState(initialMatches)
   const [loading, setLoading] = useState(initialMatches.length === 0)
   const [error, setError] = useState(false)
-  const [watching, setWatching] = useState(null)
+  const [watching, setWatching] = useState(() => (initialMatchId && initialMatches.find((m) => m.id === initialMatchId)) || null)
   const [drawer, setDrawer] = useState(false)
   const [search, setSearch] = useState(false)
   const [query, setQuery] = useState('')
@@ -105,20 +105,25 @@ export default function App({ initialMatches = [] }) {
 
   // Phone back button closes the watch screen / drawer
   useEffect(() => {
-    const onPop = () => { setWatching(null); setDrawer(false); setSearch(false) }
+    const onPop = () => {
+      if (!window.location.pathname.startsWith('/match/')) setWatching(null)
+      setDrawer(false); setSearch(false)
+    }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
   const openMatch = (m) => {
-    if (!watching) window.history.pushState({ v: 'watch' }, '')
+    // Each match has its own URL (shareable, and what Google indexes)
+    if (!watching) window.history.pushState({ v: 'watch' }, '', matchPath(m))
+    else window.history.replaceState({ v: 'watch' }, '', matchPath(m))
     setWatching(m)
     setSearch(false)
     window.scrollTo({ top: 0 })
   }
   const closeMatch = () => {
     if (window.history.state?.v === 'watch') window.history.back()
-    else setWatching(null)
+    else { window.history.replaceState(null, '', '/'); setWatching(null) }
   }
   const go = (t, cat) => {
     if (watching) closeMatch()
@@ -164,6 +169,8 @@ export default function App({ initialMatches = [] }) {
     }
   }, [q, matches])
 
+  // Keep the open match's score/status live as the list refreshes
+  const current = watching ? matches.find((m) => m.id === watching.id) || watching : null
   const others = watching ? matches.filter((m) => m.status === 'live' && m.id !== watching.id).slice(0, 8) : []
   const pageTitle = watching ? 'Watch' : tab === 'pricing' ? 'Go Pro' : TABS.find((t) => t.id === tab)?.label
   const withAds = (cards, start = 0) => cards.flatMap((el, i) => (i % 6 === 5 ? [el, <AdBanner key={`ad-${i}`} index={start + Math.floor(i / 6)} onGoPro={() => go('pricing')} />] : [el]))
@@ -226,14 +233,14 @@ export default function App({ initialMatches = [] }) {
 
         <main className="content">
           {watching ? (
-            <WatchView match={watching} others={others} onBack={closeMatch} onOpen={openMatch} />
+            <WatchView match={current} others={others} onBack={closeMatch} onOpen={openMatch} />
           ) : tab === 'home' ? (
             <>
               <div className="marquee">
                 <div className="marquee-track">
                   {[0, 1].map((k) => (
                     <span key={k} className="marquee-set" aria-hidden={k === 1}>
-                      <span>⚡ Welcome to LiveSports — live football, cricket, NBA, NHL, UFC &amp; {CHANNELS.length}+ TV channels in one place.</span>
+                      <span>⚡ Welcome to LiveSports — live scores for football, cricket, NBA, NHL &amp; UFC, match highlights and free sports TV — all in one place.</span>
                       <span>📺 Try TV Mode to flip through channels like a real TV.</span>
                       <span>🔁 If a stream buffers, switch server below the player.</span>
                     </span>

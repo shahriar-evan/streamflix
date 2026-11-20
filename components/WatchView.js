@@ -2,6 +2,7 @@
 import { useEffect, useMemo } from 'react'
 import { channelsForMatch, sportOf } from '../lib/data'
 import { channelStatus, qualityLabel } from '../lib/streams'
+import { formatDate, formatTime } from '../lib/format'
 import Icon from './Icon'
 import MatchCard, { StatusBadge, TeamLogo } from './MatchCard'
 import PlayerPanel, { goPro } from './PlayerPanel'
@@ -21,7 +22,7 @@ export default function WatchView({ match, others, onBack, onOpen, player: exter
   const channels = useMemo(() => channelsForMatch(match), [match])
 
   useEffect(() => {
-    player.start(channels)
+    if (channels.length) player.start(channels)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match.id])
 
@@ -39,10 +40,19 @@ export default function WatchView({ match, others, onBack, onOpen, player: exter
           </div>
         </div>
 
-        <PlayerPanel player={player} adKey={match.id} />
+        {channels.length ? (
+          <PlayerPanel player={player} adKey={match.id} />
+        ) : (
+          <div className="nostream">
+            <span className="nostream-ico">📊</span>
+            <b>{match.status === 'live' ? 'Live score — updating every 30 seconds' : match.status === 'upcoming' ? 'Match preview' : 'Full-time result'}</b>
+            <span>There&apos;s no free live stream for this match. Follow the score here, or watch free sports channels in TV Mode.</span>
+          </div>
+        )}
 
         <div className="scoreboard">
           <StatusBadge m={match} />
+          {match.status !== 'upcoming' && <span className="sb-when" suppressHydrationWarning>Started {formatTime(match.start)} · {formatDate(match.start)}</span>}
           {match.team1 ? (
             <div className="sb-teams">
               <div className="sb-team"><TeamLogo team={match.team1} size={56} /><span>{match.team1.name}</span></div>
@@ -63,9 +73,9 @@ export default function WatchView({ match, others, onBack, onOpen, player: exter
 
         <AdBanner onGoPro={goPro} index={1} />
 
-        <section className="block">
-          <h3 className="block-title">Channels <span>{channels.length}</span></h3>
-          <p className="block-hint">The best working channel plays automatically. Tap another to switch.</p>
+        {channels.length > 0 && <section className="block">
+          <h3 className="block-title">Free channels <span>{channels.length}</span></h3>
+          <p className="block-hint">The best working free channel plays automatically. Tap another to switch.</p>
           <div className="chan-chips">
             {channels.map((ch) => (
               <button key={ch.id} className={`chan-chip ${player.channel?.id === ch.id ? 'on' : ''} ${channelStatus(ch).state === 'off' ? 'dim' : ''}`}
@@ -76,7 +86,7 @@ export default function WatchView({ match, others, onBack, onOpen, player: exter
               </button>
             ))}
           </div>
-        </section>
+        </section>}
       </div>
 
       <aside className="watch-side">
