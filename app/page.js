@@ -1,774 +1,400 @@
 'use client'
-import { useState, useCallback, useEffect } from 'react'
-import dynamic from 'next/dynamic'
-import { WC_CHANNELS, MATCHES, SPORT_TABS } from '../lib/data'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { CHANNELS, CHANNEL_CATEGORIES, SPORTS } from '../lib/data'
+import { isRecent } from '../lib/format'
+import { check } from '../lib/streams'
+import Icon from '../components/Icon'
+import { Logo } from '../components/Brand'
+import MatchCard, { Avatar, StatusBadge, TeamLogo } from '../components/MatchCard'
+import WatchView from '../components/WatchView'
+import TVMode from '../components/TVMode'
+import Pricing from '../components/Pricing'
+import Highlights from '../components/Highlights'
+import { AdBanner } from '../components/Ads'
+import { usePlan, PRO_PRICE } from '../lib/plan'
 
-const VideoPlayer = dynamic(() => import('../components/VideoPlayer'), { ssr: false })
+const TABS = [
+  { id: 'home', label: 'Home', icon: 'home' },
+  { id: 'tv', label: 'TV Mode', icon: 'tv' },
+  { id: 'categories', label: 'Categories', icon: 'grid' },
+  { id: 'highlights', label: 'Highlights', icon: 'playBox' },
+]
+const FILTERS = [
+  { id: 'recent', label: 'Recent' },
+  { id: 'live', label: 'Live' },
+  { id: 'upcoming', label: 'Upcoming' },
+  { id: 'all', label: 'All' },
+]
 
-const SPORT_ICONS = {
-  football: '⚽', cricket: '🏏', basketball: '🏀', tennis: '🎾',
-  baseball: '⚾', hockey: '🏒', mma: '🥊', boxing: '🥊', motorsport: '🏎️', f1: '🏎️'
-}
-const si = (s) => SPORT_ICONS[(s || '').toLowerCase()] || '🏆'
-
-const FLAGS = {
-  // Americas
-  'Mexico':'🇲🇽','Brazil':'🇧🇷','Argentina':'🇦🇷','USA':'🇺🇸','United States':'🇺🇸',
-  'Canada':'🇨🇦','Ecuador':'🇪🇨','Colombia':'🇨🇴','Chile':'🇨🇱','Peru':'🇵🇪',
-  'Uruguay':'🇺🇾','Paraguay':'🇵🇾','Bolivia':'🇧🇴','Venezuela':'🇻🇪','Panama':'🇵🇦',
-  'Costa Rica':'🇨🇷','Honduras':'🇭🇳','Jamaica':'🇯🇲','Haiti':'🇭🇹','Cuba':'🇨🇺',
-  'Trinidad and Tobago':'🇹🇹','Curaçao':'🏝️','Guatemala':'🇬🇹','El Salvador':'🇸🇻',
-  // Europe
-  'England':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','Scotland':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','Wales':'🏴󠁧󠁢󠁷󠁬󠁳󠁿','Germany':'🇩🇪','France':'🇫🇷',
-  'Spain':'🇪🇸','Italy':'🇮🇹','Portugal':'🇵🇹','Netherlands':'🇳🇱','Belgium':'🇧🇪',
-  'Croatia':'🇭🇷','Poland':'🇵🇱','Denmark':'🇩🇰','Sweden':'🇸🇪','Norway':'🇳🇴',
-  'Finland':'🇫🇮','Switzerland':'🇨🇭','Austria':'🇦🇹','Czech Republic':'🇨🇿','Czechia':'🇨🇿',
-  'Hungary':'🇭🇺','Romania':'🇷🇴','Serbia':'🇷🇸','Ukraine':'🇺🇦','Russia':'🇷🇺',
-  'Greece':'🇬🇷','Turkey':'🇹🇷','Türkiye':'🇹🇷','Slovakia':'🇸🇰','Slovenia':'🇸🇮',
-  'Albania':'🇦🇱','Bosnia and Herzegovina':'🇧🇦','Bosnia':'🇧🇦','Kosovo':'🇽🇰',
-  'North Macedonia':'🇲🇰','Montenegro':'🇲🇪','Bulgaria':'🇧🇬','Iceland':'🇮🇸',
-  'Republic of Ireland':'🇮🇪','Ireland':'🇮🇪','Luxembourg':'🇱🇺','Moldova':'🇲🇩',
-  'Georgia':'🇬🇪','Armenia':'🇦🇲','Azerbaijan':'🇦🇿','Cyprus':'🇨🇾','Malta':'🇲🇹',
-  'Ivory Coast':'🇨🇮',"Côte d'Ivoire":'🇨🇮',
-  // Africa
-  'South Africa':'🇿🇦','Morocco':'🇲🇦','Nigeria':'🇳🇬','Ghana':'🇬🇭','Senegal':'🇸🇳',
-  'Egypt':'🇪🇬','Cameroon':'🇨🇲','Algeria':'🇩🇿','Tunisia':'🇹🇳','Mali':'🇲🇱',
-  'Burkina Faso':'🇧🇫','Guinea':'🇬🇳','Zambia':'🇿🇲','Zimbabwe':'🇿🇼','Kenya':'🇰🇪',
-  'Tanzania':'🇹🇿','Ethiopia':'🇪🇹','Uganda':'🇺🇬','Angola':'🇦🇴','Congo':'🇨🇬',
-  // Asia
-  'Japan':'🇯🇵','South Korea':'🇰🇷','Australia':'🇦🇺','Saudi Arabia':'🇸🇦',
-  'Qatar':'🇶🇦','Iran':'🇮🇷','UAE':'🇦🇪','Uzbekistan':'🇺🇿','China':'🇨🇳',
-  'Indonesia':'🇮🇩','Thailand':'🇹🇭','Vietnam':'🇻🇳','Philippines':'🇵🇭',
-  // Cricket specific
-  'Bangladesh':'🇧🇩','India':'🇮🇳','Pakistan':'🇵🇰','West Indies':'🏝️',
-  'Afghanistan':'🇦🇫','Sri Lanka':'🇱🇰','New Zealand':'🇳🇿',
-  'WI':'🏝️','WI-W':'🏝️','NZ-W':'🇳🇿','BAN-W':'🇧🇩','IND-W':'🇮🇳',
-  'PAK-W':'🇵🇰','NED-W':'🇳🇱','AUS-W':'🇦🇺','SA-W':'🇿🇦',
-  'West Indies-W':'🏝️','New Zealand-W':'🇳🇿','Bangladesh-W':'🇧🇩',
-  'Netherlands-W':'🇳🇱','India-W':'🇮🇳','Pakistan-W':'🇵🇰',
-  // MLB Teams
-  'New York Yankees':'⚾','Boston Red Sox':'🧦','Los Angeles Dodgers':'⚾',
-  'Chicago Cubs':'🐻','San Francisco Giants':'⚾','Houston Astros':'⭐',
-  'Atlanta Braves':'🪓','Philadelphia Phillies':'🔔','New York Mets':'🍎',
-  'Washington Nationals':'🦅','Seattle Mariners':'🧭','Pittsburgh Pirates':'⚾',
-  'Miami Marlins':'🐟','Minnesota Twins':'🌲','St. Louis Cardinals':'🔴',
-  'Chicago White Sox':'⚾','Colorado Rockies':'⛰️','Cincinnati Reds':'🔴',
-  'Arizona Diamondbacks':'💎','San Diego Padres':'🟤','Tampa Bay Rays':'🌊',
-  'Detroit Tigers':'🐯','Kansas City Royals':'👑','Baltimore Orioles':'🐦',
-  'Toronto Blue Jays':'🦅','Milwaukee Brewers':'🍺','Oakland Athletics':'🐘',
-  'Texas Rangers':'⭐','Cleveland Guardians':'🛡️','Los Angeles Angels':'😇',
-  // NHL Teams
-  'Boston Celtics':'🍀','Dallas Mavericks':'⭐','Golden State Warriors':'🌉',
-  'OKC Thunder':'⚡','Vegas Golden Knights':'⚔️','Carolina Hurricanes':'🌀',
-  'Edmonton Oilers':'🛢️','Florida Panthers':'🐆','Toronto Maple Leafs':'🍁',
-  'New York Rangers':'🗽','Colorado Avalanche':'⛰️','Tampa Bay Lightning':'⚡',
-  'Pittsburgh Penguins':'🐧','Chicago Blackhawks':'🦅','Montreal Canadiens':'🍁',
-  'Detroit Red Wings':'🔴','Dallas Stars':'⭐','San Jose Sharks':'🦈',
-  // NBA Teams
-  'Los Angeles Lakers':'💜','Golden State Warriors':'🌉','Milwaukee Bucks':'🦌',
-  'Phoenix Suns':'☀️','Miami Heat':'🔥','Brooklyn Nets':'🕸️',
-  'Philadelphia 76ers':'🔔','Denver Nuggets':'⛏️','Memphis Grizzlies':'🐻',
-  'New Orleans Pelicans':'🦢','Oklahoma City Thunder':'⚡',
-  // Tennis
-  'Djokovic':'🇷🇸','Alcaraz':'🇪🇸','Swiatek':'🇵🇱','Sabalenka':'🇧🇾',
-  'Nadal':'🇪🇸','Federer':'🇨🇭','Medvedev':'🇷🇺','Zverev':'🇩🇪',
-  // Italian Serie A teams
-  'Udinese':'🏴‍☠️','Como':'🏔️','Juventus':'⚫','Milan':'🔴','Inter':'🔵',
-  'AC Milan':'🔴','Inter Milan':'🔵','Roma':'🟡','Napoli':'🔵','Lazio':'🔵',
-  'Fiorentina':'🟣','Atalanta':'🔵','Torino':'🔴','Genoa':'🔵','Cagliari':'🔴',
-  'Bologna':'🔴','Verona':'🟡','Sassuolo':'🟢','Lecce':'🟡','Empoli':'🔵',
-  'Venezia':'🟠','Parma':'🟡','Monza':'🔴','Frosinone':'🟡','Salernitana':'🔴',
-  // La Liga teams
-  'Real Madrid':'⚪','Barcelona':'🔵','Atletico Madrid':'🔴','Sevilla':'🔴',
-  'Valencia':'🦇','Athletic Bilbao':'🔴','Real Sociedad':'🔵','Villarreal':'🟡',
-  'Real Betis':'🟢','Osasuna':'🔴','Mallorca':'🔴','Girona':'🔴',
-  // Bundesliga teams
-  'Bayern Munich':'🔴','Borussia Dortmund':'🟡','RB Leipzig':'🔴',
-  'Bayer Leverkusen':'🔴','Eintracht Frankfurt':'🔴','Wolfsburg':'🟢',
-  // Ligue 1 teams
-  'PSG':'🔵','Paris Saint-Germain':'🔵','Marseille':'🔵','Lyon':'🔴',
-  'Monaco':'🔴','Lille':'🔴','Nice':'🔴','Rennes':'🔴',
-  // Premier League teams
-  'Arsenal':'🔴','Chelsea':'🔵','Liverpool':'🔴','Manchester City':'🔵',
-  'Manchester United':'🔴','Tottenham':'⚪','Newcastle':'⚫','Aston Villa':'🟣',
-  'West Ham':'🔵','Brighton':'🔵','Crystal Palace':'🔴','Fulham':'⚪',
-  'Brentford':'🔴','Wolves':'🟡','Everton':'🔵','Nottingham Forest':'🔴',
-  'Burnley':'🟣','Luton':'🟠','Sheffield United':'🔴',
-  // Argentinian teams
-  'Atlético Tucumán':'🔵','Independiente Rivadavia':'🔴','Boca Juniors':'🟡',
-  'River Plate':'🔴','Racing Club':'🔵','San Lorenzo':'🔵','Vélez Sársfield':'🔵',
-  // Uzbekistan
-  'Andijon':'🇺🇿','Surkhon Termez':'🇺🇿','Lokomotiv Tashkent':'🇺🇿',
-  // Italian Serie A teams (for API)
-  'Udinese':'🏴','Como':'🏴','Juventus':'⚫','Milan':'🔴','Inter':'🔵',
-  'Roma':'🟡','Napoli':'🔵','Lazio':'🔵','Fiorentina':'🟣','Atalanta':'🔵',
-}
-
-const getFlag = (name='') => {
-  if (!name) return '🏳️'
-  if (FLAGS[name]) return FLAGS[name]
-  const nl = name.toLowerCase()
-  for (const [k,v] of Object.entries(FLAGS)) {
-    if (nl === k.toLowerCase()) return v
-    if (nl.includes(k.toLowerCase()) && k.length > 4) return v
-  }
-  // Generic sport emoji based on context
-  if (/united|city|fc |sport|athletic|club|real |inter |ac /i.test(name)) return '⚽'
-  if (/yankee|red sox|dodger|cubs|mets|astro|braves/i.test(name)) return '⚾'
-  if (/lake|celtic|warrior|buck|heat|suns|knick/i.test(name)) return '🏀'
-  if (/maple|ranger|penguin|hawk|shark|capital/i.test(name)) return '🏒'
-  return '🏴'
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d } catch { return d } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch {} },
 }
 
 export default function Home() {
+  const [splash, setSplash] = useState(true)
+  const [tab, setTab] = useState('home')
   const [sport, setSport] = useState('all')
-  const [activeMatch, setActiveMatch] = useState(null)
-  const [activeChannel, setActiveChannel] = useState(null)
-  const [activeServer, setActiveServer] = useState(null)
-  const [streamUrl, setStreamUrl] = useState(null)
-  const [apiMatches, setApiMatches] = useState([])
+  const [filter, setFilter] = useState('recent')
+  const [matches, setMatches] = useState([])
   const [loading, setLoading] = useState(true)
-
-  // Load real matches — no cache, always fresh
-  useEffect(() => {
-    const loadMatches = async () => {
-      try {
-        const res = await fetch(`/api/matches?t=${Date.now()}`, {
-          cache: 'no-store',
-          headers: { 'Cache-Control': 'no-cache' }
-        })
-        const data = await res.json()
-        if (Array.isArray(data) && data.length > 0) {
-          // API now returns fully formatted events directly
-          setApiMatches(data)
-        }
-      } catch (e) {}
-      setLoading(false)
-    }
-    loadMatches()
-    const interval = setInterval(loadMatches, 30000) // refresh every 30s
-    return () => clearInterval(interval)
-  }, [])
-
-  // Auto-play ONLY if there's a live match
-  useEffect(() => {
-    if (apiMatches.length === 0) return
-    const valid = apiMatches.filter(m =>
-      m.team1?.name && m.team2?.name &&
-      m.team1.name !== 'Home' && m.team2.name !== 'Away' &&
-      m.team1.name.length > 1 && m.team2.name.length > 1
-    )
-    // Only auto-select if there's a live match — never auto-select future/upcoming
-    const live = valid.find(m => m.status === 'live')
-    if (live) selectMatch(live)
-    // No live match? Leave player blank — user chooses
-  }, [apiMatches])
-
-  // শুধু API থেকে real-time data — static পুরনো matches দেখাবে না
-  const allMatches = apiMatches.length > 0
-    ? apiMatches.filter(m =>
-        m.team1?.name && m.team2?.name &&
-        m.team1.name !== 'Home' && m.team2.name !== 'Away' &&
-        m.team1.name !== 'TBA' && m.team2.name !== 'TBA'
-      )
-    : MATCHES // fallback শুধু API সম্পূর্ণ fail করলে
-
-  const filtered = useCallback(() => {
-    // sport filter — __live__/__upcoming__ are sidebar tab states, not sport filters
-    if (sport === 'all' || sport === '__live__' || sport === '__upcoming__') return allMatches
-    return allMatches.filter(m => m.cat === sport)
-  }, [sport, allMatches])
-
-  const liveMatches = filtered().filter(m => m.status === 'live')
-  const upcomingMatches = filtered().filter(m => m.status !== 'live')
-
-  const selectMatch = (match) => {
-    setActiveMatch(match)
-    setStreamUrl(null)
-    const matchChannels = (match.channels || []).map(id => WC_CHANNELS.find(c => c.id === id)).filter(Boolean)
-    if (matchChannels.length > 0) {
-      selectChannel(matchChannels[0], match)
-    } else {
-      setActiveChannel(null)
-      setActiveServer(null)
-    }
-  }
-
-  const [viewers, setViewers] = useState({})
-  const [autoTrying, setAutoTrying] = useState(false)
+  const [error, setError] = useState(false)
+  const [watching, setWatching] = useState(null)
+  const [drawer, setDrawer] = useState(false)
+  const [search, setSearch] = useState(false)
+  const [query, setQuery] = useState('')
+  const [tvCategory, setTvCategory] = useState('all')
   const [favorites, setFavorites] = useState([])
-  const [scheduleTab, setScheduleTab] = useState('all')
-  const [stageTab, setStageTab] = useState('all')
-  const [voteChoice, setVoteChoice] = useState(null)
-  const [votes, setVotes] = useState({ team1: 37, draw: 7, team2: 56 })
+  const plan = usePlan()
 
-  const toggleFavorite = (chId) => {
-    setFavorites(prev => prev.includes(chId) ? prev.filter(x => x !== chId) : [...prev, chId])
-  }
-
-  const handleVote = (choice) => {
-    if (voteChoice) return
-    setVoteChoice(choice)
-    setVotes(prev => ({ ...prev, [choice]: prev[choice] + 1 }))
-  }
-
-  const SCHEDULE_MATCHES = [
-    { id: 's1', group: 'GROUP A', team1: 'Mexico', flag1: '🇲🇽', team2: 'South Africa', flag2: '🇿🇦', date: 'Fri, Jun 12', time: '1:00 AM', status: 'finished', stage: 'group' },
-    { id: 's2', group: 'GROUP A', team1: 'South Korea', flag1: '🇰🇷', team2: 'Czechia', flag2: '🇨🇿', date: 'Fri, Jun 12', time: '8:00 AM', status: 'finished', stage: 'group' },
-    { id: 's3', group: 'GROUP B', team1: 'Canada', flag1: '🇨🇦', team2: 'Bosnia and Herzegovina', flag2: '🇧🇦', date: 'Sat, Jun 13', time: '1:00 AM', status: 'finished', stage: 'group' },
-    { id: 's4', group: 'GROUP D', team1: 'USA', flag1: '🇺🇸', team2: 'Paraguay', flag2: '🇵🇾', date: 'Sat, Jun 13', time: '7:00 AM', status: 'finished', stage: 'group' },
-    { id: 's5', group: 'GROUP B', team1: 'Qatar', flag1: '🇶🇦', team2: 'Switzerland', flag2: '🇨🇭', date: 'Sun, Jun 14', time: '1:00 AM', status: 'live', stage: 'group', countdown: '58m 03s left' },
-    { id: 's6', group: 'GROUP C', team1: 'Brazil', flag1: '🇧🇷', team2: 'Morocco', flag2: '🇲🇦', date: 'Sun, Jun 14', time: '4:00 AM', status: 'upcoming', stage: 'group', countdown: '1h 58m 03s' },
-    { id: 's7', group: 'GROUP C', team1: 'Haiti', flag1: '🇭🇹', team2: 'Scotland', flag2: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', date: 'Sun, Jun 14', time: '7:00 AM', status: 'upcoming', stage: 'group', countdown: '4h 58m 03s' },
-    { id: 's8', group: 'GROUP D', team1: 'Australia', flag1: '🇦🇺', team2: 'Türkiye', flag2: '🇹🇷', date: 'Sun, Jun 14', time: '10:00 AM', status: 'upcoming', stage: 'group', countdown: '7h 58m 03s' },
-    { id: 's9', group: 'GROUP E', team1: 'Germany', flag1: '🇩🇪', team2: 'Curaçao', flag2: '🏝️', date: 'Sun, Jun 14', time: '11:00 PM', status: 'upcoming', stage: 'group', countdown: '20h 58m 03s' },
-    { id: 's10', group: 'GROUP F', team1: 'Netherlands', flag1: '🇳🇱', team2: 'Japan', flag2: '🇯🇵', date: 'Mon, Jun 15', time: '2:00 AM', status: 'upcoming', stage: 'group', countdown: '23h 58m 03s' },
-    { id: 's11', group: 'GROUP E', team1: 'Ivory Coast', flag1: '🇨🇮', team2: 'Ecuador', flag2: '🇪🇨', date: 'Mon, Jun 15', time: '5:00 AM', status: 'upcoming', stage: 'group', countdown: '1d 2h 58m' },
-    { id: 's12', group: 'GROUP F', team1: 'Sweden', flag1: '🇸🇪', team2: 'Tunisia', flag2: '🇹🇳', date: 'Mon, Jun 15', time: '8:00 AM', status: 'upcoming', stage: 'group', countdown: '1d 5h 58m' },
-  ]
-
-  const filteredSchedule = SCHEDULE_MATCHES.filter(m => {
-    if (scheduleTab === 'live') return m.status === 'live'
-    if (scheduleTab === 'today') return m.date === 'Sun, Jun 14'
-    if (scheduleTab === 'upcoming') return m.status === 'upcoming'
-    if (scheduleTab === 'finished') return m.status === 'finished'
-    return true
-  }).filter(m => stageTab === 'all' || m.stage === stageTab)
-
-  // Generate fake viewer counts per channel
+  // Splash: once per browser session
   useEffect(() => {
-    const counts = {}
-    WC_CHANNELS.forEach(ch => {
-      counts[ch.id] = Math.floor(Math.random() * 450) + 50
-    })
-    setViewers(counts)
-    const interval = setInterval(() => {
-      setViewers(prev => {
-        const next = { ...prev }
-        Object.keys(next).forEach(id => {
-          const change = Math.floor(Math.random() * 21) - 10
-          next[id] = Math.max(10, Math.min(999, next[id] + change))
-        })
-        return next
-      })
-    }, 3000)
-    return () => clearInterval(interval)
+    let seen = false
+    try { seen = sessionStorage.getItem('ls_splash') === '1' } catch {}
+    const t = setTimeout(() => {
+      setSplash(false)
+      try { sessionStorage.setItem('ls_splash', '1') } catch {}
+    }, seen ? 0 : 1400)
+    return () => clearTimeout(t)
   }, [])
 
-  const tryServersAuto = (ch) => {
-    // Directly load first server — no HEAD check (proxied URLs don't respond to HEAD)
-    setAutoTrying(false)
-    setActiveServer(ch.servers[0])
-    setStreamUrl(ch.servers[0].url)
-    setAutoTrying(false)
-  }
+  // This app has no service worker — remove any left by older projects on this port
+  useEffect(() => {
+    navigator.serviceWorker?.getRegistrations?.().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {})
+  }, [])
 
-  const selectChannel = (ch, match = activeMatch) => {
-    setActiveChannel(ch)
-    if (ch.servers.length > 0) {
-      tryServersAuto(ch)
+  useEffect(() => { setFavorites(store.get('sf_favs', [])) }, [])
+
+  // Warm the stream-check cache in the background so channels open instantly later
+  useEffect(() => {
+    const t = setTimeout(() => check(CHANNELS.flatMap((c) => c.servers.map((s) => s.url))), 2500)
+    return () => clearTimeout(t)
+  }, [])
+  const toggleFavorite = useCallback((id) => {
+    setFavorites((f) => {
+      const next = f.includes(id) ? f.filter((x) => x !== id) : [...f, id]
+      store.set('sf_favs', next)
+      return next
+    })
+  }, [])
+
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch('/api/matches', { cache: 'no-store' })
+      const d = await r.json()
+      setMatches(d.matches || [])
+      setError(false)
+    } catch {
+      setError(true)
     }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    load()
+    const i = setInterval(load, 30000)
+    return () => clearInterval(i)
+  }, [load])
+
+  // "Go Pro" buttons anywhere (ads, player) open the pricing page
+  useEffect(() => {
+    const fn = () => go('pricing')
+    window.addEventListener('ls:gopro', fn)
+    return () => window.removeEventListener('ls:gopro', fn)
+  })
+
+  // Phone back button closes the watch screen / drawer
+  useEffect(() => {
+    const onPop = () => { setWatching(null); setDrawer(false); setSearch(false) }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  const openMatch = (m) => {
+    if (!watching) window.history.pushState({ v: 'watch' }, '')
+    setWatching(m)
+    setSearch(false)
+    window.scrollTo({ top: 0 })
+  }
+  const closeMatch = () => {
+    if (window.history.state?.v === 'watch') window.history.back()
+    else setWatching(null)
+  }
+  const go = (t, cat) => {
+    if (watching) closeMatch()
+    if (cat) setTvCategory(cat)
+    setTab(t)
+    setDrawer(false)
+    window.scrollTo({ top: 0 })
   }
 
-  const selectServer = (srv) => {
-    setActiveServer(srv)
-    setStreamUrl(srv.url)
-  }
-
-  // Auto-try next server when current stream fails
-  const tryNextServer = () => {
-    if (!activeChannel) return
-    const servers = activeChannel.servers
-    const currentIdx = servers.findIndex(s => s.label === activeServer?.label)
-    const nextIdx = (currentIdx + 1) % servers.length
-    if (nextIdx !== currentIdx) {
-      const next = servers[nextIdx]
-      setActiveServer(next)
-      setStreamUrl(next.url)
+  // ── Derived match lists ──
+  const bySport = useMemo(() => (sport === 'all' ? matches : matches.filter((m) => m.sport === sport)), [matches, sport])
+  const counts = useMemo(() => {
+    const c = { all: 0 }
+    for (const m of matches) {
+      if (m.status === 'finished') continue
+      c.all++
+      c[m.sport] = (c[m.sport] || 0) + 1
     }
-  }
+    return c
+  }, [matches])
+  const lists = useMemo(() => {
+    const live = bySport.filter((m) => m.status === 'live')
+    const upcoming = bySport.filter((m) => m.status === 'upcoming')
+    const recent = bySport.filter((m) => isRecent(m))
+    const order = { live: 0, upcoming: 1, finished: 2 }
+    recent.sort((a, b) => order[a.status] - order[b.status] || new Date(a.start) - new Date(b.start))
+    return { live, upcoming, recent, all: bySport }
+  }, [bySport])
+  const shown = lists[filter]
+  const featured = useMemo(() => {
+    const live = matches.filter((m) => m.status === 'live' && m.team1)
+    return live.find((m) => m.sport === 'football') || live[0] || matches.find((m) => m.status === 'upcoming' && m.team1)
+  }, [matches])
+  const liveCount = matches.filter((m) => m.status === 'live').length
 
-  const getMatchChannels = (match) => {
-    if (!match) return []
-    return (match.channels || []).map(id => WC_CHANNELS.find(c => c.id === id)).filter(Boolean)
-  }
+  const q = query.trim().toLowerCase()
+  const results = useMemo(() => {
+    if (!q) return { matches: [], channels: [] }
+    const hit = (s) => (s || '').toLowerCase().includes(q)
+    return {
+      matches: matches.filter((m) => hit(m.team1?.name) || hit(m.team2?.name) || hit(m.league) || hit(m.title)).slice(0, 20),
+      channels: CHANNELS.filter((c) => hit(c.name)).slice(0, 12),
+    }
+  }, [q, matches])
+
+  const others = watching ? matches.filter((m) => m.status === 'live' && m.id !== watching.id).slice(0, 8) : []
+  const pageTitle = watching ? 'Watch' : tab === 'pricing' ? 'Go Pro' : TABS.find((t) => t.id === tab)?.label
+  const withAds = (cards, start = 0) => cards.flatMap((el, i) => (i % 6 === 5 ? [el, <AdBanner key={`ad-${i}`} index={start + Math.floor(i / 6)} onGoPro={() => go('pricing')} />] : [el]))
 
   return (
-    <div style={{ minHeight: '100vh' }}>
-
-      {/* NAV */}
-      <nav style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 20px', height: 54,
-        background: '#1a1a2e',
-        borderBottom: '3px solid #e50914',
-        position: 'sticky', top: 0, zIndex: 100
-      }}>
-        <div style={{ fontSize: 22, fontWeight: 800, color: '#fff' }}>
-          Stream<span style={{ color: '#e50914' }}>Flix</span>
+    <div className="app">
+      {splash && (
+        <div className="splash">
+          <div className="splash-icon"><Logo size="lg" /></div>
+          <p>Live sports &amp; TV, anytime</p>
+          <div className="splash-bar"><i /></div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: '#ef4444' }}>
-            <div style={{
-              width: 7, height: 7, borderRadius: '50%', background: '#ef4444',
-              animation: 'pulse 1.2s infinite'
-            }} />
-            LIVE
-          </div>
-        </div>
-      </nav>
+      )}
 
-      {/* CHANNEL TABS — sticky below nav */}
-      <div style={{
-        display: 'flex', gap: 6, padding: '8px 16px',
-        background: '#fff', borderBottom: '2px solid #e5e7eb',
-        overflowX: 'auto', scrollbarWidth: 'none', alignItems: 'center',
-        position: 'sticky', top: 54, zIndex: 90,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-      }}>
-        {WC_CHANNELS.map(ch => (
-          <button
-            key={ch.id}
-            onClick={() => { setActiveMatch(null); selectChannel(ch) }}
-            style={{
-              padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-              cursor: 'pointer', border: '1.5px solid',
-              borderColor: activeChannel?.id === ch.id ? '#2563eb' : '#d1d5db',
-              background: activeChannel?.id === ch.id ? '#2563eb' : '#fff',
-              color: activeChannel?.id === ch.id ? '#fff' : '#374151',
-              whiteSpace: 'nowrap', flexShrink: 0, transition: 'all .15s',
-              boxShadow: activeChannel?.id === ch.id ? '0 2px 8px #2563eb44' : 'none'
-            }}
-          >
-            <span style={{display:'flex',alignItems:'center',gap:5}}>
-              {ch.icon} {ch.name}
-              <span
-                onClick={(e) => { e.stopPropagation(); toggleFavorite(ch.id) }}
-                style={{ fontSize: 13, opacity: favorites.includes(ch.id) ? 1 : 0.3, cursor: 'pointer', marginLeft: 2 }}
-                title={favorites.includes(ch.id) ? 'Remove from favorites' : 'Add to favorites'}
-              >⭐</span>
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* SPORT TABS */}
-      <div style={{
-        display: 'flex', gap: 6, padding: '8px 16px',
-        background: '#fff', borderBottom: '1px solid #e5e7eb',
-        overflowX: 'auto', scrollbarWidth: 'none'
-      }}>
-        {SPORT_TABS.map(tab => {
-          const liveCount = tab.id === 'all' ? allMatches.filter(m=>m.status==='live').length : allMatches.filter(m=>m.cat===tab.id && m.status==='live').length
-          const isActive = sport === tab.id
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setSport(tab.id)}
-              style={{
-                padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-                cursor: 'pointer', border: '1.5px solid',
-                borderColor: isActive ? '#e50914' : '#d1d5db',
-                background: isActive ? '#e50914' : '#fff',
-                color: isActive ? '#fff' : '#374151',
-                whiteSpace: 'nowrap', flexShrink: 0, transition: 'all .2s',
-                display: 'flex', alignItems: 'center', gap: 5
-              }}
-            >
-              {tab.icon} {tab.label}
-              {liveCount > 0 && (
-                <span style={{
-                  fontSize: 9, fontWeight: 800, padding: '1px 5px', borderRadius: 10,
-                  background: isActive ? 'rgba(255,255,255,0.3)' : '#ef4444',
-                  color: '#fff', minWidth: 16, textAlign: 'center'
-                }}>{liveCount}</span>
-              )}
+      {/* Sidebar (laptop) */}
+      <aside className="side">
+        <div className="side-logo"><Logo /></div>
+        <nav className="side-nav">
+          {TABS.map((t) => (
+            <button key={t.id} className={`side-item ${tab === t.id && !watching ? 'on' : ''}`} onClick={() => go(t.id)}>
+              <Icon name={t.icon} size={20} />{t.label}
+              {t.id === 'home' && liveCount > 0 && <span className="side-badge">{liveCount}</span>}
             </button>
-          )
-        })}
-      </div>
-
-      {/* MAIN */}
-      <div style={{ display: 'flex', minHeight: 'calc(100vh - 104px)' }}>
-
-        {/* SIDEBAR */}
-        <div style={{
-          width: 300, flexShrink: 0,
-          borderRight: '1px solid #e5e7eb',
-          background: '#fff', overflowY: 'auto'
-        }}>
-          {/* All/Live/Upcoming tabs */}
-          <div style={{ display: 'flex', borderBottom: '2px solid #e5e7eb', background: '#f9fafb' }}>
-            {[
-              { id: 'all', label: 'All', count: allMatches.length },
-              { id: 'live', label: 'Live', count: allMatches.filter(m=>m.status==='live').length },
-              { id: 'upcoming', label: 'Upcoming', count: allMatches.filter(m=>m.status==='upcoming').length },
-            ].map(tab => (
-              <button key={tab.id} onClick={() => setSport(tab.id === 'live' ? '__live__' : tab.id === 'upcoming' ? '__upcoming__' : 'all')}
-                style={{
-                  flex: 1, padding: '9px 4px', fontSize: 11, fontWeight: 700,
-                  background: 'transparent', border: 'none', cursor: 'pointer',
-                  borderBottom: (['all','__live__','__upcoming__'].includes(sport) ? (sport === '__live__' && tab.id === 'live') || (sport === '__upcoming__' && tab.id === 'upcoming') || (sport === 'all' && tab.id === 'all') : false) ? '3px solid #22c55e' : '3px solid transparent',
-                  color: (sport === '__live__' && tab.id === 'live') || (sport === '__upcoming__' && tab.id === 'upcoming') || (sport === 'all' && tab.id === 'all') ? '#22c55e' : '#6b7280',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5
-                }}>
-                {tab.label}
-                <span style={{
-                  fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10,
-                  background: tab.id === 'live' && tab.count > 0 ? '#ef4444' : '#e5e7eb',
-                  color: tab.id === 'live' && tab.count > 0 ? '#fff' : '#6b7280'
-                }}>{tab.count}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Live matches — hide when "Upcoming" tab selected */}
-          {liveMatches.length > 0 && sport !== '__upcoming__' && (
-            <>
-              <div style={{ padding: '8px 14px 4px', fontSize: 10, fontWeight: 700, color: '#6b7280', letterSpacing: '1.2px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'pulse 1s infinite' }} />
-                🔴 Live Now · {liveMatches.length}
-              </div>
-              {liveMatches.map(m => <MatchCard key={m.id} match={m} active={activeMatch?.id === m.id} onClick={() => selectMatch(m)} />)}
-            </>
-          )}
-          {/* Upcoming matches — hide when "Live" tab selected */}
-          {upcomingMatches.length > 0 && sport !== '__live__' && (
-            <>
-              <div style={{ padding: '8px 14px 4px', fontSize: 10, fontWeight: 700, color: '#6b7280', letterSpacing: '1.2px', textTransform: 'uppercase' }}>
-                🕐 Next Matches · {upcomingMatches.length}
-              </div>
-              {upcomingMatches.slice(0, 20).map(m => <MatchCard key={m.id} match={m} active={activeMatch?.id === m.id} onClick={() => selectMatch(m)} />)}
-            </>
-          )}
-          {!liveMatches.length && !upcomingMatches.length && (
-            <div style={{ padding: 30, color: '#9ca3af', fontSize: 12, textAlign: 'center' }}>No matches found</div>
-          )}
+          ))}
+          <button className="side-item" onClick={() => go('tv', 'favorites')}>
+            <Icon name="star" size={20} />Favorites
+            {favorites.length > 0 && <span className="side-count">{favorites.length}</span>}
+          </button>
+          <button className={`side-item ${tab === 'pricing' && !watching ? 'on' : ''}`} onClick={() => go('pricing')}>
+            <Icon name="star" size={20} fill />{plan.pro ? 'My plan' : 'Go Pro'}
+            {plan.pro ? <span className="pro-badge">PRO</span> : <span className="side-count">${PRO_PRICE}/wk</span>}
+          </button>
+        </nav>
+        <div className="side-foot">
+          <div className="side-live"><span className="dot" />{liveCount} live now</div>
+          <span>{CHANNELS.length} TV channels</span>
         </div>
+      </aside>
 
-        {/* PLAYER AREA */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <div className="main">
+        {/* Top bar */}
+        <header className="topbar">
+          <button className="icon-btn only-mobile" onClick={() => setDrawer(true)} aria-label="Menu"><Icon name="menu" /></button>
+          <div className="only-mobile topbar-logo">
+            {tab === 'home' || watching ? <Logo size="sm" /> : <span className="topbar-title">{pageTitle}</span>}
+          </div>
+          <h1 className="only-desktop topbar-title">{pageTitle}</h1>
+          <div className="topbar-search only-desktop" onClick={() => setSearch(true)}>
+            <Icon name="search" size={18} /><span>Search teams, leagues, channels…</span>
+          </div>
+          <div className="topbar-actions">
+            {plan.pro
+              ? <span className="pro-badge big">PRO</span>
+              : <button className="gopro" onClick={() => go('pricing')}><Icon name="star" size={15} fill /><span className="gopro-long">Go </span>Pro</button>}
+            <button className="icon-btn round only-mobile" onClick={() => setSearch(true)} aria-label="Search"><Icon name="search" /></button>
+            <button className="icon-btn round desk-only" onClick={() => go('tv', 'favorites')} aria-label="Favorites"><Icon name="star" fill /></button>
+            <button className="icon-btn round desk-only" onClick={load} aria-label="Refresh"><Icon name="refresh" size={20} /></button>
+          </div>
+        </header>
 
-          {/* VIDEO */}
-          <VideoPlayer url={streamUrl} onStreamFail={tryNextServer} />
-
-          {/* MATCH INFO */}
-          {activeMatch && (
-            <div style={{
-              background: 'var(--surface)', borderBottom: '1px solid var(--border)',
-              padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 700 }}>
-                  <span style={{ fontSize: 26 }}>{activeMatch.team1.flag}</span>
-                  {activeMatch.team1.name}
-                </div>
-                {activeMatch.scoreA !== '' ? (
-                  <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--accent)' }}>
-                    {activeMatch.scoreA} - {activeMatch.scoreB}
-                  </span>
-                ) : (
-                  <span style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 700 }}>VS</span>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 700 }}>
-                  <span style={{ fontSize: 26 }}>{activeMatch.team2.flag}</span>
-                  {activeMatch.team2.name}
+        <main className="content">
+          {watching ? (
+            <WatchView match={watching} others={others} onBack={closeMatch} onOpen={openMatch} />
+          ) : tab === 'home' ? (
+            <>
+              <div className="marquee">
+                <div className="marquee-track">
+                  {[0, 1].map((k) => (
+                    <span key={k} className="marquee-set" aria-hidden={k === 1}>
+                      <span>⚡ Welcome to LiveSports — live football, cricket, NBA, NHL, UFC &amp; {CHANNELS.length}+ TV channels in one place.</span>
+                      <span>📺 Try TV Mode to flip through channels like a real TV.</span>
+                      <span>🔁 If a stream buffers, switch server below the player.</span>
+                    </span>
+                  ))}
                 </div>
               </div>
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: 4,
-                fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4,
-                background: activeMatch.status === 'live' ? '#ff2d2d22' : '#ffffff0a',
-                color: activeMatch.status === 'live' ? 'var(--live)' : 'var(--muted)'
-              }}>
-                {activeMatch.status === 'live' ? '🔴 LIVE' : `🕐 ${activeMatch.time}`}
-              </span>
-            </div>
-          )}
 
-          {/* CHANNEL BAR */}
-          {activeMatch && getMatchChannels(activeMatch).length > 0 && (
-            <div style={{
-              background: '#fff', borderBottom: '1px solid #e5e7eb',
-              padding: '8px 16px', display: 'flex', gap: 6,
-              overflowX: 'auto', scrollbarWidth: 'none', alignItems: 'center'
-            }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '1px', whiteSpace: 'nowrap', marginRight: 4 }}>
-                📺 CHANNELS
-              </span>
-              {getMatchChannels(activeMatch).map(ch => (
-                <button
-                  key={ch.id}
-                  onClick={() => selectChannel(ch)}
-                  style={{
-                    padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600,
-                    cursor: 'pointer', border: '1.5px solid',
-                    borderColor: activeChannel?.id === ch.id ? '#e50914' : '#d1d5db',
-                    background: activeChannel?.id === ch.id ? '#e50914' : '#fff',
-                    color: activeChannel?.id === ch.id ? '#fff' : '#374151',
-                    whiteSpace: 'nowrap', flexShrink: 0, transition: 'all .15s',
-                    display: 'flex', alignItems: 'center', gap: 5,
-                    boxShadow: activeChannel?.id === ch.id ? '0 2px 8px #e5091430' : 'none'
-                  }}
-                >
-                  {ch.icon} {ch.name}
-                  
+              {featured && (
+                <button className="hero" onClick={() => openMatch(featured)}>
+                  <div className="hero-top">
+                    <span className="hero-league">
+                      {featured.leagueLogo && <img src={featured.leagueLogo} alt="" />}
+                      {featured.league}
+                    </span>
+                    <StatusBadge m={featured} />
+                  </div>
+                  <div className="hero-teams">
+                    <div className="hero-team"><TeamLogo team={featured.team1} size={88} /><b>{featured.team1.name}</b></div>
+                    <div className="hero-mid">
+                      {featured.status === 'live' && featured.sport !== 'cricket'
+                        ? <span className="hero-score">{featured.team1.score} - {featured.team2.score}</span>
+                        : <span className="hero-vs">VS</span>}
+                      <span className="btn btn-primary"><Icon name="play" size={16} fill />Watch now</span>
+                    </div>
+                    <div className="hero-team"><TeamLogo team={featured.team2} size={88} /><b>{featured.team2.name}</b></div>
+                  </div>
                 </button>
-              ))}
-            </div>
-          )}
+              )}
 
-          {/* SERVER BAR */}
-          {activeChannel && (
-            <div style={{
-              background: '#f9fafb', borderBottom: '1px solid #e5e7eb',
-              padding: '7px 16px', display: 'flex', gap: 6,
-              overflowX: 'auto', scrollbarWidth: 'none', alignItems: 'center'
-            }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '1px', whiteSpace: 'nowrap', marginRight: 4 }}>
-                🔗 SERVERS {autoTrying && <span style={{color:'#e50914'}}>⟳ Auto...</span>}
-              </span>
-              {activeChannel.servers.map((srv, i) => (
-                <button
-                  key={i}
-                  onClick={() => selectServer(srv)}
-                  style={{
-                    padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600,
-                    cursor: 'pointer', border: '1.5px solid',
-                    borderColor: activeServer?.label === srv.label ? '#2563eb' : '#d1d5db',
-                    background: activeServer?.label === srv.label ? '#2563eb' : '#fff',
-                    color: activeServer?.label === srv.label ? '#fff' : '#6b7280',
-                    whiteSpace: 'nowrap', flexShrink: 0, transition: 'all .15s'
-                  }}
-                >
-                  {srv.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* FAN PREDICTION */}
-          {activeMatch && (
-            <div style={{ margin: '16px 20px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: '20px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 18 }}>📊</span>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>Fan Prediction</span>
-                </div>
-                <span style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>{(votes.team1 + votes.draw + votes.team2 + 8040).toLocaleString()} votes</span>
-              </div>
-              <div style={{ color: '#374151', fontSize: 12, marginBottom: 14 }}>আপনার মতে কে জিতবে?</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 18 }}>
-                {[
-                  { key: 'team1', label: activeMatch.team1.name, flag: activeMatch.team1.flag, color: '#3b82f6' },
-                  { key: 'draw', label: 'Draw', flag: '🤝', color: '#6b7280' },
-                  { key: 'team2', label: activeMatch.team2.name, flag: activeMatch.team2.flag, color: '#22c55e' },
-                ].map(opt => (
-                  <button key={opt.key} onClick={() => handleVote(opt.key)} style={{
-                    padding: '10px 8px', borderRadius: 8, border: '2px solid',
-                    borderColor: voteChoice === opt.key ? opt.color : '#e5e7eb',
-                    background: voteChoice === opt.key ? opt.color + '15' : '#fff',
-                    cursor: voteChoice ? 'default' : 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600,
-                    color: voteChoice === opt.key ? opt.color : '#374151', transition: 'all .2s'
-                  }}>
-                    <span style={{ fontSize: 16 }}>{opt.flag}</span> {opt.label}
+              <div className="sports">
+                {SPORTS.map((s) => (
+                  <button key={s.id} className={`sport ${sport === s.id ? 'on' : ''}`} onClick={() => setSport(s.id)}>
+                    <span className="sport-circle">
+                      <span className="sport-ico">{s.icon}</span>
+                      {counts[s.id] > 0 && <span className="sport-badge">{counts[s.id]}</span>}
+                    </span>
+                    <span className="sport-label">{s.label}</span>
                   </button>
                 ))}
               </div>
-              {[
-                { key: 'team1', label: activeMatch.team1.name, color: '#3b82f6' },
-                { key: 'draw', label: 'Draw', color: '#9ca3af' },
-                { key: 'team2', label: activeMatch.team2.name, color: '#22c55e' },
-              ].map(opt => {
-                const pct = Math.round(votes[opt.key] / (votes.team1 + votes.draw + votes.team2) * 100)
+
+              <div className="filters">
+                {FILTERS.map((f) => (
+                  <button key={f.id} className={`filter ${filter === f.id ? 'on' : ''}`} onClick={() => setFilter(f.id)}>
+                    {filter === f.id && <span className="check">✓</span>}
+                    {f.label} ({lists[f.id].length})
+                  </button>
+                ))}
+              </div>
+
+              {loading ? (
+                <div className="mgrid">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="mcard skeleton" />)}</div>
+              ) : error && !matches.length ? (
+                <div className="empty"><Icon name="signal" size={36} /><b>Couldn&apos;t load matches</b><button className="btn" onClick={load}>Try again</button></div>
+              ) : shown.length === 0 ? (
+                <div className="empty">
+                  <span className="empty-ico">{SPORTS.find((s) => s.id === sport)?.icon}</span>
+                  <b>No {filter === 'all' ? '' : filter} matches here</b>
+                  <span>Try another sport or filter — or open TV Mode.</span>
+                  <button className="btn btn-primary" onClick={() => go('tv')}><Icon name="tv" size={16} />Open TV Mode</button>
+                </div>
+              ) : (
+                <div className="mgrid">
+                  {withAds(shown.map((m) => <MatchCard key={m.id} m={m} onClick={() => openMatch(m)} />))}
+                </div>
+              )}
+            </>
+          ) : tab === 'tv' ? (
+            <TVMode category={tvCategory} setCategory={setTvCategory} favorites={favorites} toggleFavorite={toggleFavorite} />
+          ) : tab === 'pricing' ? (
+            <Pricing />
+          ) : tab === 'categories' ? (
+            <div className="cats">
+              <button className="cat cat-live" onClick={() => { setFilter('live'); setSport('all'); go('home') }}>
+                <span className="cat-ico" style={{ background: '#e50914' }}>🔴</span>
+                <span className="cat-text"><b>Live Events</b><small>{liveCount} live now</small></span>
+              </button>
+              {CHANNEL_CATEGORIES.map((c) => {
+                const n = c.id === 'all' ? CHANNELS.length : CHANNELS.filter((ch) => ch.group === c.id).length
                 return (
-                  <div key={opt.key} style={{ marginBottom: 10 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 4 }}>
-                      <span>{opt.label}</span><span>{pct}%</span>
-                    </div>
-                    <div style={{ height: 8, background: '#f3f4f6', borderRadius: 4, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: pct + '%', background: opt.color, borderRadius: 4, transition: 'width .5s' }} />
-                    </div>
-                  </div>
+                  <button key={c.id} className="cat" onClick={() => go('tv', c.id)}>
+                    <span className="cat-ico" style={{ background: c.color }}>{c.icon}</span>
+                    <span className="cat-text"><b>{c.label}</b><small>{n} channel{n === 1 ? '' : 's'}</small></span>
+                  </button>
                 )
               })}
-              {voteChoice && (
-                <div style={{ marginTop: 12, fontSize: 12, color: '#22c55e', fontWeight: 600, textAlign: 'center' }}>
-                  ✅ আপনার ভোট দেওয়া হয়েছে! ধন্যবাদ।
-                </div>
+              {favorites.length > 0 && (
+                <button className="cat" onClick={() => go('tv', 'favorites')}>
+                  <span className="cat-ico" style={{ background: '#ca8a04' }}>⭐</span>
+                  <span className="cat-text"><b>Favorites</b><small>{favorites.length} saved</small></span>
+                </button>
               )}
             </div>
+          ) : (
+            <Highlights sport="all" onGoPro={() => go('pricing')} />
           )}
+        </main>
+      </div>
 
-          {/* FAVORITE CHANNELS */}
-          {favorites.length > 0 && (
-            <div style={{ margin: '0 20px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '12px 16px' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#92400e', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                ⭐ Favorite Channels
-              </div>
-              <div style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none' }}>
-                {WC_CHANNELS.filter(ch => favorites.includes(ch.id)).map(ch => (
-                  <button key={ch.id} onClick={() => { setActiveMatch(null); selectChannel(ch) }} style={{
-                    padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 600,
-                    background: activeChannel?.id === ch.id ? '#f59e0b' : '#fff',
-                    color: activeChannel?.id === ch.id ? '#fff' : '#374151',
-                    border: '1.5px solid #fcd34d', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0
-                  }}>
-                    {ch.icon} {ch.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+      {/* Bottom nav (mobile) */}
+      <nav className="bottomnav">
+        {TABS.map((t) => (
+          <button key={t.id} className={`bn-item ${tab === t.id && !watching ? 'on' : ''}`} onClick={() => go(t.id)}>
+            <Icon name={t.icon} size={24} fill={tab === t.id && !watching && t.id !== 'tv'} />
+            <span>{t.label}</span>
+          </button>
+        ))}
+      </nav>
 
-          {/* MATCH SCHEDULE */}
-          <div style={{ margin: '0 20px 20px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-              <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>📅 MATCH SCHEDULE</span>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {['all','live','today','upcoming','finished'].map(tab => (
-                  <button key={tab} onClick={() => setScheduleTab(tab)} style={{
-                    padding: '5px 11px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                    background: scheduleTab === tab ? '#1d4ed8' : '#f3f4f6',
-                    color: scheduleTab === tab ? '#fff' : '#374151',
-                    border: 'none', textTransform: 'capitalize'
-                  }}>{tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1)}</button>
-                ))}
-              </div>
+      {/* Drawer (mobile) */}
+      <div className={`drawer-wrap ${drawer ? 'open' : ''}`} onClick={() => setDrawer(false)}>
+        <aside className="drawer" onClick={(e) => e.stopPropagation()}>
+          <div className="drawer-head"><Logo size="lg" /></div>
+          <button className="drawer-item" onClick={() => go('tv', 'all')}><Icon name="list" />Channels</button>
+          <button className="drawer-item" onClick={() => go('tv', 'favorites')}><Icon name="star" />Favorites</button>
+          <button className="drawer-item" onClick={() => go('categories')}><Icon name="grid" />Categories</button>
+          <button className="drawer-item" onClick={() => go('highlights')}><Icon name="playBox" />Highlights</button>
+          <button className="drawer-item drawer-pro" onClick={() => go('pricing')}><Icon name="star" fill />{plan.pro ? 'My plan (Pro)' : `Go Pro — $${PRO_PRICE}/week`}</button>
+          <button className="drawer-item" onClick={() => { load(); setDrawer(false) }}><Icon name="refresh" />Refresh matches</button>
+          <button className="drawer-item" onClick={() => {
+            const url = window.location.href
+            if (navigator.share) navigator.share({ title: 'LiveSports', url }).catch(() => {})
+            else navigator.clipboard?.writeText(url)
+            setDrawer(false)
+          }}><Icon name="share" />Share app</button>
+          <div className="drawer-foot">
+            <Icon name="info" size={16} />LiveSports · {CHANNELS.length} channels · {liveCount} live
+          </div>
+        </aside>
+      </div>
+
+      {/* Search */}
+      {search && (
+        <div className="search-wrap" onClick={() => setSearch(false)}>
+          <div className="search-box" onClick={(e) => e.stopPropagation()}>
+            <div className="search-input">
+              <Icon name="search" size={20} />
+              <input autoFocus placeholder="Search teams, leagues, channels…" value={query} onChange={(e) => setQuery(e.target.value)} />
+              <button className="icon-btn" onClick={() => setSearch(false)} aria-label="Close"><Icon name="x" size={20} /></button>
             </div>
-            <div style={{ padding: '10px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none' }}>
-              {[
-                { id: 'all', label: 'All Stage' },
-                { id: 'group', label: 'Group Stage' },
-                { id: 'r32', label: 'Round 32' },
-                { id: 'r16', label: 'Round 16' },
-                { id: 'qf', label: 'Quarterfinals' },
-                { id: 'sf', label: 'Semi Finals' },
-                { id: 'final', label: 'Final' },
-              ].map(s => (
-                <button key={s.id} onClick={() => setStageTab(s.id)} style={{
-                  padding: '5px 13px', borderRadius: 20, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                  background: stageTab === s.id ? '#1d4ed8' : '#f3f4f6',
-                  color: stageTab === s.id ? '#fff' : '#374151',
-                  border: 'none', whiteSpace: 'nowrap', flexShrink: 0
-                }}>{s.label}</button>
+            <div className="search-results">
+              {!q && <p className="muted small pad">Type a team (e.g. “Bayern”), a league or a channel name.</p>}
+              {q && !results.matches.length && !results.channels.length && <p className="muted small pad">Nothing found for “{query}”.</p>}
+              {results.channels.length > 0 && <h4>Channels</h4>}
+              {results.channels.map((c) => (
+                <button key={c.id} className="sr-row" onClick={() => { setSearch(false); go('tv', c.group) }}>
+                  <Avatar name={c.name} size={36} /><span><b>{c.name}</b><small>{c.servers.length} servers</small></span>
+                </button>
+              ))}
+              {results.matches.length > 0 && <h4>Matches</h4>}
+              {results.matches.map((m) => (
+                <button key={m.id} className="sr-row" onClick={() => openMatch(m)}>
+                  {m.team1 ? <TeamLogo team={m.team1} size={36} /> : <Avatar name={m.title} size={36} />}
+                  <span><b>{m.team1 ? `${m.team1.name} vs ${m.team2.name}` : m.title}</b><small>{m.league}</small></span>
+                  <StatusBadge m={m} />
+                </button>
               ))}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
-              {filteredSchedule.map((m, i) => (
-                <div key={m.id} style={{
-                  padding: '14px 18px', borderBottom: '1px solid #f3f4f6',
-                  borderRight: i % 2 === 0 ? '1px solid #f3f4f6' : 'none',
-                  background: m.status === 'live' ? '#f0fdf4' : '#fff',
-                  cursor: 'pointer', transition: 'background .15s'
-                }}
-                  onMouseEnter={e => e.currentTarget.style.background = m.status === 'live' ? '#dcfce7' : '#f9fafb'}
-                  onMouseLeave={e => e.currentTarget.style.background = m.status === 'live' ? '#f0fdf4' : '#fff'}
-                >
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#3b82f6', marginBottom: 8, letterSpacing: '0.5px' }}>{m.group}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', marginBottom: 4 }}>
-                        {m.flag1} {m.team1}
-                      </div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>
-                        {m.flag2} {m.team2}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right', minWidth: 80 }}>
-                      <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>{m.date}</div>
-                      <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6 }}>{m.time}</div>
-                      {m.status === 'live' ? (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#fff', background: '#ef4444', padding: '2px 8px', borderRadius: 4 }}>
-                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#fff', display: 'inline-block', animation: 'pulse 1s infinite' }} /> LIVE
-                        </span>
-                      ) : m.status === 'finished' ? (
-                        <span style={{ fontSize: 10, fontWeight: 600, color: '#6b7280', background: '#f3f4f6', padding: '2px 8px', borderRadius: 4 }}>Finished</span>
-                      ) : (
-                        <span style={{ fontSize: 10, color: '#6b7280' }}>{m.countdown}</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {filteredSchedule.length === 0 && (
-                <div style={{ padding: 30, textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No matches found</div>
-              )}
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function MatchCard({ match, active, onClick }) {
-  const isLive = match.status === 'live'
-  const chCount = (match.channels || []).length
-
-  return (
-    <div onClick={onClick} style={{
-      padding: '13px 14px',
-      borderBottom: '1px solid #e5e7eb',
-      borderLeft: active ? '3px solid #22c55e' : '3px solid transparent',
-      background: active ? '#f0fdf4' : '#fff',
-      cursor: 'pointer', position: 'relative', transition: 'background .15s'
-    }}
-      onMouseEnter={e => !active && (e.currentTarget.style.background = '#f9fafb')}
-      onMouseLeave={e => !active && (e.currentTarget.style.background = '#fff')}
-    >
-      {/* Tournament header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
-        <div style={{ fontSize: 10, color: '#6b7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          {si(match.cat)} {match.tournament}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          {match.hot && (
-            <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg,#f59e0b,#ef4444)', padding: '2px 6px', borderRadius: 4 }}>HOT</span>
-          )}
-          {chCount > 0 && (
-            <span style={{ fontSize: 9, fontWeight: 700, color: '#3b82f6', background: '#eff6ff', padding: '2px 6px', borderRadius: 4, border: '1px solid #bfdbfe' }}>{chCount} ch</span>
-          )}
-        </div>
-      </div>
-
-      {/* Teams */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {/* Team badges / flags */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 600, color: '#111827' }}>
-            <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{getFlag(match.team1.name) !== '🏳️' ? getFlag(match.team1.name) : match.team1.flag}</span>
-            <span style={{ flex: 1 }}>{match.team1.name}</span>
-            {match.scoreA !== '' && match.scoreA !== undefined && (
-              <span style={{ fontSize: 16, fontWeight: 800, color: '#111827', minWidth: 20, textAlign: 'right' }}>{match.scoreA}</span>
-            )}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 600, color: '#111827' }}>
-            <span style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>{getFlag(match.team2.name) !== '🏳️' ? getFlag(match.team2.name) : match.team2.flag}</span>
-            <span style={{ flex: 1 }}>{match.team2.name}</span>
-            {match.scoreB !== '' && match.scoreB !== undefined && (
-              <span style={{ fontSize: 16, fontWeight: 800, color: '#111827', minWidth: 20, textAlign: 'right' }}>{match.scoreB}</span>
-            )}
           </div>
         </div>
-      </div>
-
-      {/* Status */}
-      <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-        {isLive ? (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: '#ef4444' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'pulse 1s infinite' }} />
-            Live
-          </span>
-        ) : (
-          <span style={{ fontSize: 10, color: '#6b7280' }}>🕐 {match.time}</span>
-        )}
-        {match.elapsed && isLive && (
-          <span style={{ fontSize: 10, color: '#6b7280' }}>· {match.elapsed}</span>
-        )}
-      </div>
+      )}
     </div>
   )
 }

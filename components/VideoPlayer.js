@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState, useCallback } from 'react'
 
-export default function VideoPlayer({ url, onStreamFail }) {
+export default function VideoPlayer({ url, onStreamFail, muted = false }) {
   const videoRef = useRef(null)
   const hlsRef = useRef(null)
   const [quality, setQuality] = useState('auto')
@@ -15,6 +15,11 @@ export default function VideoPlayer({ url, onStreamFail }) {
   const lastTimeStampRef = useRef(Date.now())
   const failCountRef = useRef(0)
   const mediaRecoveryRef = useRef(false)
+  const failRef = useRef(onStreamFail)
+  failRef.current = onStreamFail
+  const fail = () => failRef.current?.()
+
+  useEffect(() => { if (videoRef.current) videoRef.current.muted = muted }, [muted])
 
   const destroyHls = () => {
     clearInterval(stuckRef.current)
@@ -43,7 +48,8 @@ export default function VideoPlayer({ url, onStreamFail }) {
         maxBufferHole: 0.3,
         nudgeOffset: 0.2,
         nudgeMaxRetry: 8,
-        fragLoadingMaxRetry: 6,
+        fragLoadingMaxRetry: 4,
+        capLevelToPlayerSize: false,
         fragLoadingRetryDelay: 500,
         manifestLoadingMaxRetry: 5,
         manifestLoadingRetryDelay: 500,
@@ -61,6 +67,11 @@ export default function VideoPlayer({ url, onStreamFail }) {
           .sort((a, b) => (parseInt(b.label) || 0) - (parseInt(a.label) || 0))
         setQualityLevels(levels)
         failCountRef.current = 0
+        // Lock to the highest resolution (manual level = hls.js won't drop quality)
+        if (levels.length > 1) {
+          hls.currentLevel = levels[0].index
+          setQuality(levels[0].label)
+        }
       })
 
       hls.on(Hls.Events.FRAG_LOADED, () => {
@@ -76,21 +87,21 @@ export default function VideoPlayer({ url, onStreamFail }) {
         console.warn('HLS fatal error:', d.type, d.details, 'attempt:', failCountRef.current)
 
         if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          if (failCountRef.current <= 5) {
-            setTimeout(() => hls.startLoad(), 800 * failCountRef.current)
+          if (failCountRef.current <= 2) {
+            setTimeout(() => hls.startLoad(), 700 * failCountRef.current)
           } else {
             failCountRef.current = 0
-            onStreamFail?.()
+            fail()
           }
         } else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
           if (!mediaRecoveryRef.current) {
             mediaRecoveryRef.current = true
             hls.recoverMediaError()
           } else {
-            onStreamFail?.()
+            fail()
           }
         } else {
-          onStreamFail?.()
+          fail()
         }
       })
 
@@ -105,12 +116,12 @@ export default function VideoPlayer({ url, onStreamFail }) {
         if (currentTime === lastTimeRef.current && timeSinceProgress > 8000 && !v.paused) {
           console.warn('Stream stuck detected, recovering...')
           failCountRef.current++
-          if (failCountRef.current <= 3) {
+          if (failCountRef.current <= 2) {
             hls.startLoad()
             v.play().catch(() => {})
           } else {
             failCountRef.current = 0
-            onStreamFail?.()
+            fail()
           }
         } else if (currentTime !== lastTimeRef.current) {
           lastTimeRef.current = currentTime
@@ -129,7 +140,7 @@ export default function VideoPlayer({ url, onStreamFail }) {
       lastTimeRef.current = video.currentTime
       lastTimeStampRef.current = Date.now()
     })
-  }, [onStreamFail])
+  }, [])
 
   const startCountdown = useCallback((src, secs = 3) => {
     if (countdownRef.current) clearInterval(countdownRef.current)
@@ -153,7 +164,7 @@ export default function VideoPlayer({ url, onStreamFail }) {
 
   useEffect(() => {
     if (!url) { setCountdown(null); return }
-    startCountdown(url, 3)
+    startCountdown(url, 1)
     return () => {
       clearInterval(countdownRef.current)
       destroyHls()
@@ -171,7 +182,7 @@ export default function VideoPlayer({ url, onStreamFail }) {
     setShowQuality(false)
   }
 
-  const refresh = () => url && startCountdown(url, 3)
+  const refresh = () => url && startCountdown(url, 1)
   const toggleFullscreen = () => {
     const c = videoRef.current?.parentElement
     if (!document.fullscreenElement) c?.requestFullscreen?.().catch(() => {})
@@ -179,14 +190,13 @@ export default function VideoPlayer({ url, onStreamFail }) {
   }
 
   return (
-    <div style={{ position: 'relative', background: '#000', aspectRatio: '16/9', maxHeight: '62vh' }}>
+    <div className="vplayer" style={{ position: 'relative', background: '#000', aspectRatio: '16/9', width: '100%' }}>
 
       {!url && (
         <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'linear-gradient(135deg,#0a0a0f,#1a1a28)', gap:14, padding:24, textAlign:'center' }}>
           <div style={{ fontSize:54, opacity:0.15 }}>📺</div>
-          <p style={{ color:'#aaa', fontSize:15, fontWeight:700, margin:0 }}>No Live Match Right Now</p>
-          <p style={{ color:'#555', fontSize:12, margin:0 }}>Select any channel from the tabs above</p>
-          <p style={{ color:'#444', fontSize:11, margin:0 }}>Or pick an upcoming match from the sidebar</p>
+          <p style={{ color:'#aaa', fontSize:15, fontWeight:700, margin:0 }}>Pick a channel to start watching</p>
+          <p style={{ color:'#555', fontSize:12, margin:0 }}>Choose a channel from the list</p>
         </div>
       )}
 
@@ -196,7 +206,7 @@ export default function VideoPlayer({ url, onStreamFail }) {
             <div style={{ position:'absolute', inset:0, border:'5px solid rgba(255,255,255,0.08)', borderTop:'5px solid #e50914', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
             <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, fontWeight:800, color:'#fff' }}>{countdown}</div>
           </div>
-          <p style={{ color:'#ccc', fontSize:14, fontWeight:600, marginBottom:6 }}>Connecting securely to the server...</p>
+          <p style={{ color:'#ccc', fontSize:14, fontWeight:600, marginBottom:6 }}>Connecting to server...</p>
           <p style={{ color:'#666', fontSize:12 }}>Optimizing stream for your device.</p>
         </div>
       )}

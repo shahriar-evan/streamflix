@@ -1,107 +1,112 @@
-export const dynamic = 'force-dynamic' // no cache — always fresh
-export const revalidate = 0
+// Live, upcoming and finished matches from ESPN's public scoreboards.
+// (TheSportsDB's old free key "3" was permanently disabled.)
+export const dynamic = 'force-dynamic'
 
-const FLAGS = {
-  'Qatar':'🇶🇦','Switzerland':'🇨🇭','Brazil':'🇧🇷','Morocco':'🇲🇦',
-  'Haiti':'🇭🇹','Scotland':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','Australia':'🇦🇺','Türkiye':'🇹🇷','Turkey':'🇹🇷',
-  'Germany':'🇩🇪','Netherlands':'🇳🇱','Japan':'🇯🇵','Curaçao':'🏝️',
-  'Ivory Coast':'🇨🇮','Ecuador':'🇪🇨','Sweden':'🇸🇪','Tunisia':'🇹🇳',
-  'England':'🏴󠁧󠁢󠁥󠁮󠁧󠁿','France':'🇫🇷','Spain':'🇪🇸','Argentina':'🇦🇷',
-  'USA':'🇺🇸','Portugal':'🇵🇹','Italy':'🇮🇹','Belgium':'🇧🇪','Croatia':'🇭🇷',
-  'Mexico':'🇲🇽','South Africa':'🇿🇦','Canada':'🇨🇦','Bangladesh':'🇧🇩',
-  'India':'🇮🇳','Pakistan':'🇵🇰','West Indies':'🏝️','Afghanistan':'🇦🇫',
-  'Sri Lanka':'🇱🇰','New Zealand':'🇳🇿','WI':'🏝️','WI-W':'🏝️','NZ-W':'🇳🇿',
-  'BAN-W':'🇧🇩','IND-W':'🇮🇳','PAK-W':'🇵🇰','NED-W':'🇳🇱','AUS-W':'🇦🇺',
-  'South Korea':'🇰🇷','Czechia':'🇨🇿','Serbia':'🇷🇸','Poland':'🇵🇱',
-  'Bosnia and Herzegovina':'🇧🇦','Paraguay':'🇵🇾','UAE':'🇦🇪',
-}
-const getFlag = (n='') => {
-  for (const [k,v] of Object.entries(FLAGS))
-    if (n.toLowerCase().includes(k.toLowerCase())) return v
-  return '🏳️'
-}
-const HOT_KW = ['FIFA WORLD CUP','WORLD CUP','NBA FINALS','ICC','WIMBLEDON','STANLEY CUP','UFC','CHAMPIONS LEAGUE','PREMIER LEAGUE','BANGLADESH','INDIA']
-const isHot = (t='') => HOT_KW.some(h => t.toUpperCase().includes(h))
+const BASE = 'https://site.api.espn.com/apis/site/v2/sports'
 
-const CHANNELS = {
-  football:   ['fifa_wc','dsports','tudn','bein_tr','fox_eng','wctv','m6','telemundo','caze','espn'],
-  cricket:    ['fancode','tsports','bangla_fifa','star1','star2','willow','sony1','sony2','sony3','espn','dsports','tensports'],
-  basketball: ['espn','tnt','nbatv','fs1'],
-  baseball:   ['espn2','espn'],
-  tennis:     ['eurosport','dazn'],
-  hockey:     ['espn','tnt'],
-  mma:        ['espn','dazn','dazncombat'],
-  motorsport: ['f1tv','dazn','redbull','eurosport'],
+// [espn sport, league slug, our sport key]
+const LEAGUES = [
+  ['soccer', 'eng.1', 'football'],
+  ['soccer', 'esp.1', 'football'],
+  ['soccer', 'ger.1', 'football'],
+  ['soccer', 'ita.1', 'football'],
+  ['soccer', 'fra.1', 'football'],
+  ['soccer', 'por.1', 'football'],
+  ['soccer', 'ned.1', 'football'],
+  ['soccer', 'ksa.1', 'football'],
+  ['soccer', 'usa.1', 'football'],
+  ['soccer', 'uefa.champions', 'football'],
+  ['soccer', 'uefa.europa', 'football'],
+  ['soccer', 'uefa.nations', 'football'],
+  ['soccer', 'fifa.friendly', 'football'],
+  ['basketball', 'nba', 'basketball'],
+  ['hockey', 'nhl', 'hockey'],
+  ['football', 'nfl', 'amfootball'],
+  ['mma', 'ufc', 'mma'],
+  ['racing', 'f1', 'motorsport'],
+]
+
+const get = async (url) => {
+  const r = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(8000) })
+  if (!r.ok) throw new Error(String(r.status))
+  return r.json()
 }
 
-function parse(e, cat, status) {
-  const h = e.strHomeTeam||'', a = e.strAwayTeam||''
-  if (!h||!a||h==='Home'||a==='Away'||h==='TBA'||a==='TBA') return null
+const team = (x) => {
+  const t = x.team || x.athlete || {}
   return {
-    id: `${status}-${e.idEvent}`,
-    cat, status,
-    tournament: e.strLeague||cat,
-    team1: {name:h, flag:getFlag(h)},
-    team2: {name:a, flag:getFlag(a)},
-    scoreA: e.intHomeScore??'',
-    scoreB: e.intAwayScore??'',
-    time: status==='live'?'LIVE':`${e.dateEvent||''} · ${(e.strTime||'TBA').slice(0,5)}`,
-    hot: isHot(e.strLeague||'') || isHot(h) || isHot(a),
-    channels: CHANNELS[cat]||['espn'],
+    name: t.displayName || t.shortDisplayName || t.name || 'TBA',
+    short: t.abbreviation || '',
+    logo: t.logo || t.logos?.[0]?.href || t.flag?.href || '',
+    score: x.score == null ? '' : String(x.score),
   }
 }
 
-const SPORTS = [
-  {key:'soccer',cat:'football'},{key:'cricket',cat:'cricket'},
-  {key:'basketball',cat:'basketball'},{key:'baseball',cat:'baseball'},
-  {key:'tennis',cat:'tennis'},{key:'ice_hockey',cat:'hockey'},
-  {key:'mma',cat:'mma'},{key:'motorsport',cat:'motorsport'},
-]
-const LEAGUES = [
-  {id:'4328',cat:'football'},  // FIFA WC 2026
-  {id:'4480',cat:'football'},  // UEFA Euro
-  {id:'4335',cat:'football'},  // EPL
-  {id:'4332',cat:'football'},  // La Liga
-  {id:'4794',cat:'cricket'},   // ICC
-  {id:'4450',cat:'cricket'},   // ICC Women T20
-  {id:'4452',cat:'cricket'},   // IPL
-  {id:'4387',cat:'basketball'},{id:'4424',cat:'baseball'},{id:'4380',cat:'tennis'},{id:'4406',cat:'hockey'},
-]
+function normalize(e, sport, league) {
+  const st = e.status?.type || {}
+  const status = st.state === 'in' ? 'live' : st.state === 'post' ? 'finished' : 'upcoming'
+  const c = e.competitions?.[0] || {}
+  const cs = c.competitors || []
+  const pair = cs.length === 2 && cs.every((x) => x.team)
+  let team1 = null, team2 = null
+  if (pair) {
+    const home = cs.find((x) => x.homeAway === 'home') || cs[0]
+    const away = cs.find((x) => x.homeAway === 'away') || cs[1]
+    team1 = team(home)
+    team2 = team(away)
+  }
+  return {
+    id: `${league.slug}-${e.id}`,
+    sport,
+    league: league.name,
+    leagueSlug: league.slug,
+    leagueLogo: league.logo,
+    title: pair ? null : e.name || e.shortName || league.name,
+    team1, team2,
+    status,
+    start: e.date,
+    detail: st.shortDetail || st.detail || '',
+    note: c.status?.summary || e.status?.summary || '',
+  }
+}
+
+async function espnLeague([espnSport, slug, sport]) {
+  try {
+    const d = await get(`${BASE}/${espnSport}/${slug}/scoreboard`)
+    const lg = d.leagues?.[0] || {}
+    const league = {
+      slug,
+      name: lg.abbreviation && lg.abbreviation.length > 3 ? lg.abbreviation : lg.name || slug,
+      logo: lg.logos?.[0]?.href || '',
+    }
+    return (d.events || []).map((e) => normalize(e, sport, league))
+  } catch {
+    return []
+  }
+}
+
+async function cricket() {
+  try {
+    const d = await get('https://site.web.api.espn.com/apis/site/v2/sports/cricket/scorepanel')
+    const out = []
+    for (const g of d.scores || []) {
+      const lg = g.leagues?.[0] || {}
+      const league = { slug: `cricket.${lg.id || lg.abbreviation || ''}`, name: lg.name || 'Cricket', logo: lg.logos?.[0]?.href || '' }
+      for (const e of g.events || []) out.push(normalize(e, 'cricket', league))
+    }
+    return out
+  } catch {
+    return []
+  }
+}
 
 export async function GET() {
-  const events=[], seen=new Set()
-  const add = e => e && !seen.has(e.id) && (seen.add(e.id), events.push(e))
-
-  // Always fetch fresh — no cache headers
-  const fetchFresh = (url) => fetch(url, {
-    cache: 'no-store',
-    signal: AbortSignal.timeout(6000),
-    headers: { 'Cache-Control': 'no-cache' }
-  })
-
-  await Promise.all([
-    // Live now
-    ...SPORTS.map(async ({key,cat}) => {
-      try {
-        const r = await fetchFresh(`https://www.thesportsdb.com/api/v1/json/3/eventsnow.php?s=${key}&t=${Date.now()}`)
-        const d = await r.json()
-        ;(d?.events||[]).forEach(e => add(parse(e,cat,'live')))
-      } catch {}
-    }),
-    // Upcoming
-    ...LEAGUES.map(async ({id,cat}) => {
-      try {
-        const r = await fetchFresh(`https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${id}&t=${Date.now()}`)
-        const d = await r.json()
-        ;(d?.events||[]).slice(0,8).forEach(e => add(parse(e,cat,'upcoming')))
-      } catch {}
-    }),
-  ])
-
-  return Response.json(events, {
-    headers: {
-      'Cache-Control': 'no-store, no-cache, must-revalidate',
-      'Pragma': 'no-cache',
-    }
-  })
+  const groups = await Promise.all([...LEAGUES.map(espnLeague), cricket()])
+  const seen = new Set()
+  const matches = groups.flat().filter((m) => !seen.has(m.id) && seen.add(m.id))
+  matches.sort((a, b) => new Date(a.start) - new Date(b.start))
+  return Response.json(
+    { updated: Date.now(), matches },
+    { headers: { 'Cache-Control': 'no-store' } },
+  )
 }

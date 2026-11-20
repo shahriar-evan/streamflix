@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 
+// Live streams must never be cached (stale playlists freeze the video)
+export const dynamic = 'force-dynamic'
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
   const targetUrl = searchParams.get('url')
@@ -7,6 +10,7 @@ export async function GET(request) {
 
   try {
     const res = await fetch(targetUrl, {
+      cache: 'no-store',
       headers: {
         'User-Agent': 'Mozilla/5.0',
         'Referer': new URL(targetUrl).origin + '/',
