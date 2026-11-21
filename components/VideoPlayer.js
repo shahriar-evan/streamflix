@@ -257,8 +257,8 @@ export default function VideoPlayer({ url, onStreamFail, muted = false }) {
       {url && !countdown && (
         <div style={{ position:'absolute', bottom:0, left:0, right:0, display:'flex', alignItems:'center', justifyContent:'flex-end', gap:6, padding:'10px 12px', background:'linear-gradient(transparent,rgba(0,0,0,0.75))', zIndex:10 }}>
           <div className="vp-vol" style={{ display:'flex', alignItems:'center', gap:6, marginRight:'auto' }}>
-            <button onClick={toggleMute} style={btn} aria-label={silent ? 'Unmute' : 'Mute'} title="Mute (M)">
-              {silent ? '🔇' : volume < 0.5 ? '🔉' : '🔊'}
+            <button onClick={toggleMute} style={{ ...btn, padding:'5px 8px', display:'flex', alignItems:'center' }} aria-label={silent ? 'Unmute' : 'Mute'} title="Mute (M)">
+              <SpeakerIcon level={silent ? 0 : volume < 0.5 ? 1 : 2} />
             </button>
             <input type="range" min="0" max="1" step="0.05" value={silent ? 0 : volume}
               onChange={(e) => changeVolume(parseFloat(e.target.value))}
@@ -295,3 +295,14 @@ export default function VideoPlayer({ url, onStreamFail, muted = false }) {
 
 const btn = { padding:'6px 12px', borderRadius:7, fontSize:11, fontWeight:600, cursor:'pointer', border:'1px solid rgba(255,255,255,0.18)', background:'rgba(0,0,0,0.65)', color:'#fff', backdropFilter:'blur(6px)', whiteSpace:'nowrap' }
 const qItem = (a) => ({ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px', fontSize:13, cursor:'pointer', color:a?'#fff':'#ccc', fontWeight:a?600:400, background:a?'rgba(229,9,20,0.15)':'transparent' })
+// White speaker glyph with 0 (muted ×), 1 or 2 sound waves
+function SpeakerIcon({ level }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 9h4l5-4v14l-5-4H4z" fill="#fff" />
+      {level === 0 && <><line x1="16.5" y1="9.5" x2="21.5" y2="14.5" /><line x1="21.5" y1="9.5" x2="16.5" y2="14.5" /></>}
+      {level >= 1 && <path d="M16 9.5a3.5 3.5 0 0 1 0 5" />}
+      {level >= 2 && <path d="M18.5 6.5a7.5 7.5 0 0 1 0 11" />}
+    </svg>
+  )
+}
