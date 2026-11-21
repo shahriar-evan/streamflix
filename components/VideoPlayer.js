@@ -19,7 +19,40 @@ export default function VideoPlayer({ url, onStreamFail, muted = false }) {
   failRef.current = onStreamFail
   const fail = () => failRef.current?.()
 
-  useEffect(() => { if (videoRef.current) videoRef.current.muted = muted }, [muted])
+  // Volume: remembered per viewer; the ad break (muted prop) always wins
+  const [volume, setVolume] = useState(1)
+  const [userMuted, setUserMuted] = useState(false)
+  useEffect(() => {
+    try {
+      const v = parseFloat(localStorage.getItem('lf_volume'))
+      if (!isNaN(v)) setVolume(Math.min(1, Math.max(0, v)))
+      setUserMuted(localStorage.getItem('lf_muted') === '1')
+    } catch {}
+  }, [])
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v) return
+    v.volume = volume
+    v.muted = muted || userMuted || volume === 0
+    try { localStorage.setItem('lf_volume', String(volume)); localStorage.setItem('lf_muted', userMuted ? '1' : '0') } catch {}
+  }, [muted, userMuted, volume])
+  const changeVolume = (v) => { setVolume(v); if (v > 0) setUserMuted(false) }
+  const toggleMute = () => {
+    if (userMuted || volume === 0) { setUserMuted(false); if (volume === 0) setVolume(0.5) }
+    else setUserMuted(true)
+  }
+  // Keyboard: ↑/↓ volume, M mute, F fullscreen (ignored while typing in a field)
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!url || /input|textarea|select/i.test(e.target?.tagName)) return
+      if (e.key === 'ArrowUp') { e.preventDefault(); changeVolume(Math.min(1, +(volume + 0.1).toFixed(2))) }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); setVolume(Math.max(0, +(volume - 0.1).toFixed(2))) }
+      else if (e.key === 'm' || e.key === 'M') toggleMute()
+      else if (e.key === 'f' || e.key === 'F') toggleFullscreen()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
 
   const destroyHls = () => {
     clearInterval(stuckRef.current)
@@ -189,6 +222,8 @@ export default function VideoPlayer({ url, onStreamFail, muted = false }) {
     else document.exitFullscreen?.()
   }
 
+  const silent = muted || userMuted || volume === 0
+
   return (
     <div className="vplayer" style={{ position: 'relative', background: '#000', aspectRatio: '16/9', width: '100%' }}>
 
@@ -221,6 +256,15 @@ export default function VideoPlayer({ url, onStreamFail, muted = false }) {
 
       {url && !countdown && (
         <div style={{ position:'absolute', bottom:0, left:0, right:0, display:'flex', alignItems:'center', justifyContent:'flex-end', gap:6, padding:'10px 12px', background:'linear-gradient(transparent,rgba(0,0,0,0.75))', zIndex:10 }}>
+          <div className="vp-vol" style={{ display:'flex', alignItems:'center', gap:6, marginRight:'auto' }}>
+            <button onClick={toggleMute} style={btn} aria-label={silent ? 'Unmute' : 'Mute'} title="Mute (M)">
+              {silent ? '🔇' : volume < 0.5 ? '🔉' : '🔊'}
+            </button>
+            <input type="range" min="0" max="1" step="0.05" value={silent ? 0 : volume}
+              onChange={(e) => changeVolume(parseFloat(e.target.value))}
+              aria-label="Volume" title="Volume (↑/↓)"
+              style={{ width:90, accentColor:'#e50914', cursor:'pointer' }} />
+          </div>
           <div style={{ position:'relative' }}>
             <button onClick={() => setShowQuality(!showQuality)} style={btn}>⚙ {quality === 'auto' ? 'AUTO' : quality}</button>
             {showQuality && (

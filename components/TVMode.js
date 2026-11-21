@@ -46,7 +46,7 @@ export default function TVMode({ category, setCategory, favorites, toggleFavorit
             </button>
           ))}
         </div>
-        <button className="autotune" onClick={() => list.length && player.start(list)}>
+        <button className="autotune" onClick={() => list.length && player.start(list, list[0])}>
           <Icon name="playBox" size={20} />Auto tune — from first channel
         </button>
         <AdBanner slim onGoPro={goPro} index={0} />

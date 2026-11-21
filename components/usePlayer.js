@@ -79,7 +79,16 @@ export default function usePlayer() {
       if (my !== token.current) return
       done += urls.length
       setProgress({ done, total })
-      if (!current.current) {
+      if (!prefer) {
+        // Auto mode (match page): always move to the highest-resolution working stream,
+        // upgrading as later checks find a better one.
+        const best = candidates()[0]
+        const cur = current.current
+        const curH = cur ? resultFor(cur.url)?.height || 0 : -1
+        if (best && (!cur || (best.r.height || 0) > curH)) {
+          playCandidate(best, cur ? `Switched to ${best.ch.name} — ${best.r.height}p` : '')
+        }
+      } else if (!current.current) {
         const best = candidates(first.id)[0]
         if (best) {
           const switched = best.ch.id !== first.id
@@ -106,20 +115,32 @@ export default function usePlayer() {
     }
   }, [candidates])
 
-  // Manual server choice: play exactly that server
-  const pickServer = useCallback((s) => {
-    if (!channel) return
+  // Manual server choice: play exactly that server (optionally on another channel)
+  const pickServer = useCallback((s, ch = channel) => {
+    if (!ch) return
+    token.current++ // stop any auto-upgrade still running
     failed.current.delete(s.url)
-    current.current = { chId: channel.id, url: s.url }
+    current.current = { chId: ch.id, url: s.url }
+    setChannel(ch)
     setServer({ url: s.url, label: s.label, height: resultFor(s.url)?.height || 0 })
     setStatus('playing')
   }, [channel])
+
+  // Every server of every channel in play, best first: working (highest resolution),
+  // then not checked yet, then offline.
+  const options = list.current
+    .flatMap((ch) => ch.servers.map((s) => ({ ch, s, r: resultFor(s.url) })))
+    .sort((a, b) => {
+      const rank = (o) => (o.r ? (o.r.ok ? 2 : 0) : 1)
+      if (rank(a) !== rank(b)) return rank(b) - rank(a)
+      return a.r?.ok && b.r?.ok ? score(b.r) - score(a.r) : 0
+    })
 
   const retry = useCallback(() => start(list.current, channel), [start, channel])
 
   return {
     channel, server, status, progress, notice, session,
     url: status === 'playing' ? server?.url : null,
-    start, onFail, pickServer, retry,
+    options, start, onFail, pickServer, retry,
   }
 }

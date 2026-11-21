@@ -11,7 +11,7 @@ export const goPro = () => window.dispatchEvent(new CustomEvent('ls:gopro'))
 const VideoPlayer = dynamic(() => import('./VideoPlayer'), { ssr: false })
 
 // Video + checking/offline overlays + server pills. Shared by Watch and TV Mode.
-export default function PlayerPanel({ player, adKey }) {
+export default function PlayerPanel({ player, adKey, allServers = false }) {
   const { channel, server, url, status, progress, notice, onFail, pickServer, retry } = player
   const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0
   const { pro } = usePlan()
@@ -82,16 +82,17 @@ export default function PlayerPanel({ player, adKey }) {
 
       {channel && (
         <div className="servers">
-          <span className="servers-label">Servers</span>
+          <span className="servers-label">{allServers ? 'Watch on' : 'Servers'}</span>
           <div className="servers-row">
-            {channel.servers.map((s, i) => {
+            {(allServers ? player.options : channel.servers.map((s) => ({ ch: channel, s }))).map(({ ch, s }) => {
               const r = resultFor(s.url)
               const off = r && !r.ok
+              const label = allServers && ch.servers.length === 1 ? ch.name : allServers ? `${ch.name} · ${s.label}` : s.label
               return (
-                <button key={i} className={`chip srv ${server?.url === s.url ? 'on' : ''} ${off ? 'off' : ''}`} onClick={() => pickServer(s)}
+                <button key={s.url} className={`chip srv ${server?.url === s.url ? 'on' : ''} ${off ? 'off' : ''}`} onClick={() => pickServer(s, ch)}
                   title={off ? 'Not responding' : r?.ok ? 'Working' : 'Not checked yet'}>
                   <span className={`sdot ${r ? (r.ok ? 'ok' : 'bad') : ''}`} />
-                  {s.label}
+                  {label}
                   {r?.ok && r.height > 0 && <em>{qualityLabel(r.height)}</em>}
                 </button>
               )

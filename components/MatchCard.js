@@ -1,12 +1,15 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { sportOf } from '../lib/data'
 import { colorFor, formatDate, formatTime, initials, matchPath } from '../lib/format'
 import Icon from './Icon'
 
 export function TeamLogo({ team, size = 52 }) {
-  const [broken, setBroken] = useState(false)
-  if (!team?.logo || broken) {
+  // 0 = main logo, 1 = backup (country flag), 2 = initials
+  const [step, setStep] = useState(0)
+  useEffect(() => setStep(0), [team?.logo, team?.alt])
+  const src = step === 0 ? team?.logo : step === 1 ? team?.alt : ''
+  if (!src) {
     return (
       <span className="tlogo tlogo-fallback" style={{ width: size, height: size, background: colorFor(team?.name) }}>
         {initials(team?.name)}
@@ -15,7 +18,7 @@ export function TeamLogo({ team, size = 52 }) {
   }
   return (
     <span className="tlogo" style={{ width: size, height: size }}>
-      <img src={team.logo} alt="" loading="lazy" onError={() => setBroken(true)} />
+      <img key={src} src={src} alt="" loading="lazy" onError={() => setStep((s) => s + 1)} />
     </span>
   )
 }

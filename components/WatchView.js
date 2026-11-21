@@ -41,7 +41,7 @@ export default function WatchView({ match, others, onBack, onOpen, player: exter
         </div>
 
         {channels.length ? (
-          <PlayerPanel player={player} adKey={match.id} />
+          <PlayerPanel player={player} adKey={match.id} allServers />
         ) : (
           <div className="nostream">
             <span className="nostream-ico">📊</span>
@@ -75,7 +75,7 @@ export default function WatchView({ match, others, onBack, onOpen, player: exter
 
         {channels.length > 0 && <section className="block">
           <h3 className="block-title">Free channels <span>{channels.length}</span></h3>
-          <p className="block-hint">The best working free channel plays automatically. Tap another to switch.</p>
+          <p className="block-hint">The highest-resolution working channel plays automatically. Tap another to switch.</p>
           <div className="chan-chips">
             {channels.map((ch) => (
               <button key={ch.id} className={`chan-chip ${player.channel?.id === ch.id ? 'on' : ''} ${channelStatus(ch).state === 'off' ? 'dim' : ''}`}

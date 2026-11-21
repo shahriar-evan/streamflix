@@ -661,3 +661,6 @@ img { display: block; }
 .notfound-ico { font-size: 54px; }
 .notfound h1 { font-family: var(--font-display); font-size: 30px; }
 .notfound p { color: var(--muted); max-width: 440px; }
+
+/* Player volume control */
+@media (max-width: 480px) { .vp-vol input[type=range] { width: 56px !important; } }
