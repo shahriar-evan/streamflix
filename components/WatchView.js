@@ -8,6 +8,7 @@ import MatchCard, { StatusBadge, TeamLogo } from './MatchCard'
 import PlayerPanel, { goPro } from './PlayerPanel'
 import { AdBanner } from './Ads'
 import usePlayer from './usePlayer'
+import LiveCentre from './LiveCentre'
 
 export function ChanStatus({ ch }) {
   const st = channelStatus(ch)
@@ -29,6 +30,14 @@ export default function WatchView({ match, others, onBack, onOpen, player: exter
   const sport = sportOf(match.sport)
   const showScore = match.status !== 'upcoming' && match.team1?.score !== ''
 
+  const noStream = (
+    <div className="nostream">
+      <span className="nostream-ico">📊</span>
+      <b>{match.status === 'live' ? 'Live score — updating every 30 seconds' : match.status === 'upcoming' ? 'Match preview' : 'Full-time result'}</b>
+      <span>There&apos;s no free live stream for this match. Follow the score here, or watch free sports channels in TV Mode.</span>
+    </div>
+  )
+
   return (
     <div className="watch">
       <div className="watch-main">
@@ -42,12 +51,10 @@ export default function WatchView({ match, others, onBack, onOpen, player: exter
 
         {channels.length ? (
           <PlayerPanel player={player} adKey={match.id} allServers />
+        ) : match.sport === 'cricket' && match.status !== 'upcoming' ? (
+          <LiveCentre match={match} fallback={noStream} />
         ) : (
-          <div className="nostream">
-            <span className="nostream-ico">📊</span>
-            <b>{match.status === 'live' ? 'Live score — updating every 30 seconds' : match.status === 'upcoming' ? 'Match preview' : 'Full-time result'}</b>
-            <span>There&apos;s no free live stream for this match. Follow the score here, or watch free sports channels in TV Mode.</span>
-          </div>
+          noStream
         )}
 
         <div className="scoreboard">
